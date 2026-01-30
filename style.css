@@ -1,0 +1,496 @@
+/* --- MATERIAL DESIGN 3 EXPRESSIVE THEME SYSTEM --- */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* 1. VARIABLES ESTRUCTURALES (Compartidas por todos los temas) */
+:root {
+    --font-ui: 'Roboto', sans-serif;
+    --font-code: 'JetBrains Mono', 'Consolas', monospace;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 50px;
+}
+
+/* =========================================
+   LAYOUT DEFINITIVO (Header Fijo + Scroll)
+   ========================================= */
+
+
+/* 1. CONFIGURACIÓN DE PANTALLA COMPLETA */
+html, body {
+    height: 100%;       /* Ocupar toda la ventana */
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;   /* IMPORTANTE: El cuerpo NO hace scroll, se queda quieto */
+    display: flex;      
+    flex-direction: column; /* Organiza: Barra arriba, contenido abajo */
+}
+
+/* 2. BARRA SUPERIOR (FIJA) */
+.top-bar {
+    flex: 0 0 auto;    /* No se estira ni se encoge, mantiene su tamaño natural */
+    width: 97%;
+    z-index: 10;       /* Se asegura de estar encima de todo */
+    background-color: var(--md-sys-color-background); /* Fondo sólido para que no se trasluzca */
+    padding: 10px 16px 0 16px; /* Ajusta el padding según tu gusto */
+}
+
+/* 3. CONTENIDO PRINCIPAL (SCROLLABLE) */
+.main-content {
+    flex: 1;           /* Ocupa todo el espacio sobrante hacia abajo */
+    min-height: 0;     /* Truco vital para flexbox */
+    overflow-y: auto;  /* AQUÍ vive el scroll */
+    overflow-x: hidden;
+    padding: 10px 16px 20px 16px; /* Padding interno */
+}
+
+/* =========================================
+   BARRA DE SCROLL MEJORADA (Más visible)
+   ========================================= */
+
+/* Ancho de la barra (Antes era 8px, lo subimos a 12px) */
+::-webkit-scrollbar {
+    width: 80px; 
+}
+
+/* El camino de la barra (Track) - Le damos un color sutil para saber que ahí hay scroll */
+::-webkit-scrollbar-track {
+    background: rgba(128, 128, 128, 0.1); 
+}
+
+/* El "dedo" de la barra (Thumb) */
+::-webkit-scrollbar-thumb {
+    background-color: var(--md-sys-color-outline); /* Color base */
+    border-radius: 6px;       /* Bordes redondeados */
+    border: 3px solid transparent; /* Truco: crea espacio alrededor para que no se vea pegado */
+    background-clip: content-box;  /* Hace que el color respete el borde transparente */
+}
+
+/* Al pasar el mouse por encima de la barra */
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--md-sys-color-primary); /* Se ilumina con el color primario */
+    border-width: 2px; /* Se hace un poco más gordita al pasar el mouse */
+}
+
+/* 2. DEFINICIÓN DE TEMAS */
+
+/* TEMA 1: DARK (Tu diseño original) */
+body.theme-dark {
+    --md-sys-color-background: #141218;
+    --md-sys-color-surface: #1D1B20;
+    --md-sys-color-surface-container: #211F26;
+    --md-sys-color-surface-container-high: #2B2930;
+    --md-sys-color-primary: #D0BCFF; 
+    --md-sys-color-on-primary: #381E72;
+    --md-sys-color-secondary-container: #4A4458;
+    --md-sys-color-on-surface: #E6E1E5; /* Texto Principal */
+    --md-sys-color-on-surface-variant: #CAC4D0; /* Texto Secundario */
+    --md-sys-color-outline: #938F99;
+    --md-sys-color-error: #F2B8B5;
+    
+    --cmd-bg: #2b2d31; 
+    --accent-green: #B7F397; 
+    --selection-bg: rgba(208, 188, 255, 0.2);
+}
+
+/* TEMA 2: LIGHT (Modo Claro) */
+body.theme-light {
+    --md-sys-color-background: #F9F9F9;
+    --md-sys-color-surface: #FFFFFF;
+    --md-sys-color-surface-container: #F0F0F0;
+    --md-sys-color-surface-container-high: #E8E8E8;
+    --md-sys-color-primary: #6750A4; /* Morado Oscuro */
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-secondary-container: #E8DEF8;
+    --md-sys-color-on-surface: #1C1B1F; /* Texto Negro */
+    --md-sys-color-on-surface-variant: #49454F;
+    --md-sys-color-outline: #79747E;
+    --md-sys-color-error: #B3261E;
+    
+    --cmd-bg: #EFEFEF; 
+    --accent-green: #468b24; 
+    --selection-bg: rgba(103, 80, 164, 0.1);
+}
+
+/* TEMA 3: HACKER (Matrix Style) */
+body.theme-hacker {
+    --md-sys-color-background: #000000;
+    --md-sys-color-surface: #0a0a0a;
+    --md-sys-color-surface-container: #111;
+    --md-sys-color-surface-container-high: #1a1a1a;
+    --md-sys-color-primary: #00FF00; /* Verde Terminal */
+    --md-sys-color-on-primary: #000000;
+    --md-sys-color-secondary-container: #003300;
+    --md-sys-color-on-surface: #00FF00;
+    --md-sys-color-on-surface-variant: #00cc00;
+    --md-sys-color-outline: #005500;
+    --md-sys-color-error: #FF0000;
+    
+    --cmd-bg: #050505; 
+    --accent-green: #00FF00; 
+    --selection-bg: rgba(0, 255, 0, 0.1);
+}
+
+/* TEMA 4: OCEAN (Azul Profundo) */
+body.theme-ocean {
+    --md-sys-color-background: #0f172a; /* Azul Pizarra muy oscuro */
+    --md-sys-color-surface: #1e293b;
+    --md-sys-color-surface-container: #334155;
+    --md-sys-color-surface-container-high: #475569;
+    --md-sys-color-primary: #38bdf8; /* Sky Blue */
+    --md-sys-color-on-primary: #0f172a;
+    --md-sys-color-secondary-container: #1e3a8a;
+    --md-sys-color-on-surface: #f1f5f9;
+    --md-sys-color-on-surface-variant: #cbd5e1;
+    --md-sys-color-outline: #64748b;
+    --md-sys-color-error: #f87171;
+    
+    --cmd-bg: #1e293b; 
+    --accent-green: #4ade80; 
+    --selection-bg: rgba(56, 189, 248, 0.2);
+}
+
+/* TEMA 5: TERADATA (Corporate Data Style) */
+body.theme-teradata {
+    /* Fondo: Un Gris Azulado oscuro y sobrio (Slate) */
+    --md-sys-color-background: #1e252b; 
+    
+    /* Superficies (Cards/Paneles): Un poco más claras para jerarquía */
+    --md-sys-color-surface: #2d3741;
+    
+    /* Contenedores intermedios */
+    --md-sys-color-surface-container: #3c4854;
+    
+    /* Inputs y bordes fuertes: Gris acero */
+    --md-sys-color-surface-container-high: #4f5f6d;
+    
+    /* === EL COLOR CLAVE === */
+    /* Naranja Teradata Oficial (Vibrante) */
+    --md-sys-color-primary: #F37423; 
+    
+    /* Texto sobre el color primario (Blanco para contraste en el naranja) */
+    --md-sys-color-on-primary: #FFFFFF;
+    
+    /* Contenedor secundario (para fondos suaves) */
+    --md-sys-color-secondary-container: #334155;
+    
+    /* Textos */
+    --md-sys-color-on-surface: #ffffff; /* Blanco puro */
+    --md-sys-color-on-surface-variant: #cbd5e1; /* Gris claro */
+    
+    /* Bordes sutiles */
+    --md-sys-color-outline: #5c6f7f;
+    
+    /* Errores */
+    --md-sys-color-error: #ef4444;
+    
+    /* Bloques de Código (Terminal) */
+    --cmd-bg: #151a1f; /* Casi negro, para que resalte el código */
+    
+    /* Acentos */
+    --accent-green: #22c55e; 
+    
+    /* Color de selección (al pasar el mouse) - Naranja con transparencia */
+    --selection-bg: rgba(243, 116, 35, 0.15);
+}
+
+
+/* --- ESTILOS GENERALES (Usan las variables de arriba) --- */
+
+body {
+    background-color: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--font-ui);
+    margin: 0; padding: 0;
+    width: 100%; height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Transición suave al cambiar tema */
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--md-sys-color-surface-container-high); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--md-sys-color-outline); }
+
+/* TOP BAR */
+.top-bar {
+    background-color: var(--md-sys-color-surface);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--md-sys-color-surface-container-high);
+    display: flex; flex-direction: column; gap: 10px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.2rem; letter-spacing: -0.5px; }
+
+.action-buttons { display: flex; gap: 4px; align-items: center; }
+.separator { width: 1px; height: 18px; background-color: var(--md-sys-color-outline); margin: 0 4px; opacity: 0.3; }
+
+.icon-btn {
+    background: transparent; border: none; cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant);
+    padding: 6px; border-radius: var(--radius-sm);
+    transition: all 0.2s ease; font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:hover { background-color: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); transform: translateY(-1px); }
+.icon-btn.danger:hover { background-color: var(--md-sys-color-error); color: #380d0d; }
+
+/* SEARCH */
+.search-row { position: relative; width: 97%; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--md-sys-color-outline); font-size: 0.9rem; }
+input[type="text"] {
+    width: 100%; padding: 8px 12px 8px 34px;
+    background-color: var(--md-sys-color-surface-container);
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--font-ui); font-size: 0.9rem;
+    transition: all 0.2s; box-sizing: border-box;
+}
+input[type="text"]:focus {
+    outline: none; border-color: var(--md-sys-color-primary);
+    background-color: var(--md-sys-color-surface-container-high);
+    box-shadow: 0 0 0 3px var(--selection-bg);
+}
+
+/* SECTIONS (Favorites, History, Commands) */
+.section-container {
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-surface-container-high);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.section-header {
+    padding: 8px 12px;
+    background-color: var(--md-sys-color-surface-container);
+    font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--md-sys-color-on-surface-variant);
+    user-select: none; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.section-header:hover { background-color: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-primary); }
+.section-content { padding: 4px 0; }
+.section-content.collapsed { display: none; }
+
+/* TREE ITEMS */
+.tree-item {
+    padding: 4px 8px; margin: 2px 4px;
+    border-radius: var(--radius-sm);
+    cursor: pointer; user-select: none;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+}
+.tree-item:hover { background-color: var(--md-sys-color-surface-container-high); }
+
+.item-header {
+    display: flex; align-items: center; font-size: 0.8rem;
+    padding: 4px; color: var(--md-sys-color-on-surface);
+}
+.tag-badge {
+    font-size: 0.65rem; padding: 2px 6px; border-radius: 4px;
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-primary); margin-left: auto;
+}
+
+/* COMMAND PREVIEW */
+.cmd-wrapper {
+    display: flex; align-items: stretch; margin-top: 2px;
+    background-color: var(--cmd-bg); border-radius: 6px;
+    overflow: hidden; border: 1px solid var(--md-sys-color-surface-container-high);
+}
+.cmd-preview {
+    flex: 1; padding: 8px; margin: 0;
+    font-family: var(--font-code); font-size: 0.8rem;
+    color: var(--md-sys-color-on-surface);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: copy; position: relative;
+}
+.cmd-preview.expanded { white-space: pre-wrap; word-break: break-all; }
+.cmd-preview:hover { background-color: var(--md-sys-color-surface-container); }
+.cmd-preview:active { transform: scale(0.99); }
+
+.cmd-ctrl-btn {
+    width: 24px; display: flex; align-items: center; justify-content: center;
+    background-color: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-outline);
+    cursor: pointer; font-size: 0.7rem;
+    border-left: 1px solid var(--md-sys-color-surface-container-high);
+}
+.cmd-ctrl-btn:hover { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+
+/* SYNTAX HIGHLIGHT */
+.sh-keyword { color: #ff7b72; font-weight: bold; } /* Red/Pink */
+.sh-string { color: #a5d6ff; } /* Blue */
+.sh-flag { color: #79c0ff; font-style: italic; } /* Light Blue */
+.sh-comment { color: #8b949e; } /* Grey */
+
+/* Invert colors slightly for Light Mode Syntax via CSS overrides based on body class */
+body.theme-light .sh-keyword { color: #d73a49; }
+body.theme-light .sh-string { color: #032f62; }
+body.theme-light .sh-flag { color: #005cc5; }
+body.theme-light .sh-comment { color: #6a737d; }
+body.theme-hacker .sh-keyword { color: #fff; }
+body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
+
+/* FOLDER CONTENT */
+.folder-content { margin-left: 14px; border-left: 1px solid var(--md-sys-color-surface-container-high); padding-left: 4px; }
+
+/* CONTEXT MENU */
+.context-menu {
+    position: fixed; background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: var(--radius-md);
+    padding: 6px; min-width: 180px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    z-index: 9999; animation: scaleIn 0.1s ease;
+}
+.ctx-item {
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 0.85rem; color: var(--md-sys-color-on-surface);
+    display: flex; align-items: center; gap: 8px;
+}
+.ctx-item:hover { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.ctx-item.danger:hover { background-color: var(--md-sys-color-error); color: #fff; }
+
+hr { border: 0; border-top: 1px solid var(--md-sys-color-surface-container-high); margin: 4px 0; }
+
+.color-palette { display: flex; gap: 6px; padding: 6px; justify-content: center; }
+.color-dot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
+.color-dot:hover { transform: scale(1.2); border-color: var(--md-sys-color-on-surface); }
+
+.icon-selector { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; justify-content: center; }
+.icon-option { 
+    font-size: 0.85rem; /* AJUSTADO: Más pequeño y proporcional */
+    cursor: pointer; padding: 2px 6px; /* Padding ajustado */
+    border-radius: 4px; 
+    border: 1px solid transparent; color: var(--md-sys-color-on-surface);
+}
+.icon-option:hover { background-color: var(--md-sys-color-surface-container-high); border-color: var(--md-sys-color-outline); }
+
+/* MODALS & OVERLAYS */
+.modal-overlay, .settings-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+    display: flex; justify-content: center; align-items: center; z-index: 5000;
+    animation: fadeIn 0.2s;
+}
+
+.modal-box, .settings-box {
+    background: var(--md-sys-color-surface);
+    width: 85%; max-width: 320px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--md-sys-color-surface-container-high);
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 12px;
+}
+
+.modal-header, .settings-header {
+    font-size: 1.1rem; font-weight: 700;
+    color: var(--md-sys-color-primary);
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+/* SETTINGS INPUTS */
+.gh-token-input {
+    width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 10px;
+    background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface); border-radius: var(--radius-sm);
+}
+
+.btn-secondary {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-surface);
+    border: none; padding: 8px 16px; border-radius: var(--radius-sm);
+    cursor: pointer; font-weight: 500; width: 100%;
+}
+.btn-secondary:hover { filter: brightness(1.2); }
+
+.btn-gh {
+    padding: 10px; border-radius: var(--radius-sm); border: none;
+    cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.2s;
+}
+.btn-gh.upload { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.btn-gh.download { background-color: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-primary); border: 1px solid var(--md-sys-color-primary); }
+.btn-gh:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
+/* VARIABLES MODAL */
+.var-input-group { margin-bottom: 10px; }
+.v-input {
+    width: 100%; padding: 8px; background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface);
+    border-radius: var(--radius-sm); font-family: var(--font-code);
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+.btn-cancel { background: transparent; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface); padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; }
+.btn-confirm { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none; padding: 6px 16px; border-radius: var(--radius-sm); cursor: pointer; }
+
+/* TOAST */
+.status-msg {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background-color: var(--md-sys-color-on-surface); 
+    color: var(--md-sys-color-surface);
+    padding: 10px 20px; border-radius: var(--radius-pill); 
+    font-weight: 500; z-index: 7000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.hidden { display: none !important; }
+
+/* CLOUD SYNC ANIMATION */
+@keyframes cloud-pulse {
+    0% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); color: var(--md-sys-color-primary); }
+    100% { opacity: 0.4; transform: scale(1); }
+}
+.sync-working { animation: cloud-pulse 1.5s infinite ease-in-out; }
+.sync-success { opacity: 1 !important; color: var(--accent-green) !important; transition: all 0.5s ease; }
+
+/* --- FIX CRÍTICO: INPUTS DE AJUSTES --- */
+/* Forzamos el tamaño y estilo de los inputs de usuario y token */
+#username-input, 
+#gh-token-input, 
+#theme-selector {
+    height: 40px !important;        /* Altura fija cómoda */
+    min-height: 40px !important;    /* Asegura que no se aplaste */
+    font-size: 14px !important;     /* Tamaño de letra legible */
+    line-height: normal !important; /* Alineación del texto correcta */
+    padding: 5px 12px !important;   /* Espacio interno para que el texto no toque bordes */
+    box-sizing: border-box !important; /* El padding no rompe el tamaño */
+    width: 100% !important;         /* Ocupar todo el ancho disponible */
+    
+    /* Colores forzados para asegurar contraste */
+    background-color: var(--md-sys-color-surface-container-high) !important;
+    color: var(--md-sys-color-on-surface) !important;
+    border: 1px solid var(--md-sys-color-outline) !important;
+    border-radius: 4px !important;
+}
+
+/* Forzamos el tamaño de los botones de guardar para que coincidan */
+#btn-save-username,
+#btn-save-token {
+    height: 40px !important;        /* Misma altura que el input */
+    min-height: 40px !important;
+    padding: 0 20px !important;
+    font-size: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+}

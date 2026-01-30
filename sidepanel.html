@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ivan's Helper</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="new_sidepanel.js" defer></script>
+</head>
+<body class="theme-hacker">
+
+    <div class="top-bar">
+        <div class="header-row">
+            <div class="app-title">user@CmdVault:~$</div>
+            <div class="action-buttons">
+                <button id="btn-add-root" class="icon-btn" title="New Root Folder">➕</button>
+                <div class="separator"></div>
+                <button id="btn-clear-clipboard" class="icon-btn" title="Clear Clipboard">🧹</button>
+                <div class="separator"></div>
+                
+                <button id="btn-settings" class="icon-btn" title="Configuration">⚙️</button>
+                <div class="separator"></div>
+                <button id="btn-dock-toggle" class="icon-btn" title="Dock / Undock">🚀</button>
+            </div>
+        </div>
+        <div class="search-row">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search command...">
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="quick-access-container" class="section-container hidden">
+            <div id="qa-header" class="section-header">
+                <span class="section-label">⭐ Favorites</span>
+                <span id="qa-arrow">▼</span>
+            </div>
+            <div id="qa-list" class="section-content"></div>
+        </div>
+
+        <div id="history-container" class="section-container">
+            <div id="history-header" class="section-header">
+                <span class="section-label">📜 Last Used</span>
+                <span id="hist-arrow">▼</span>
+            </div>
+            <div id="history-list" class="section-content"></div>
+        </div>
+        
+        <div id="commands-wrapper" class="section-container">
+            <div id="commands-header" class="section-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <span class="section-label">📂 All Commands</span>
+                <span id="cmd-arrow">▼</span>
+               <!-- <span id="cmd-arrow" style="font-size: 0.8em;">▼</span>-->
+            </div>
+            
+            <div id="tree-container" class="section-content"></div>
+        </div>
+    </div>
+
+    
+
+    <input type="file" id="file-input" hidden accept=".json">
+    <div id="status-msg" class="status-msg hidden"></div>
+
+    <div id="context-menu" class="context-menu hidden">
+        <div id="ctx-folder-section">
+            <div style="font-size: 11px; color: #aaa; margin: 8px 0 4px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Select Folder Color</div>
+            <hr>
+            <div id="ctx-colors" class="color-palette"></div>
+            <hr>
+            <div class="ctx-item" id="ctx-add-folder">📁 New Sub-Folder</div>
+            <hr>
+            <div class="ctx-item" id="ctx-add-cmd">💻 Add Command</div>
+            <hr>                        
+        </div>
+    <div id="ctx-cmd-section" class="hidden">
+            <div class="ctx-item" id="ctx-pin-toggle">📌 Pin / Unpin</div>
+            <hr>
+            <div class="icon-selector">                
+                <span class="icon-option" data-icon="⌨️">⌨️ cmd</span>
+                <span class="icon-option" data-icon="⚡">⚡script</span>
+                <span class="icon-option" data-icon="🧾">🧾txt</span>
+                <span class="icon-option" data-icon="🔑">🔑pwd</span>
+                <span class="icon-option" data-icon="🔴">🔴</span>                             
+                <span class="icon-option" data-icon="🟢">🟢</span>                             
+                <span class="icon-option" data-icon="🔵">🔵</span>
+                <span class="icon-option" data-icon="🟡">🟡</span>                                   
+            </div>
+        </div>
+        <hr>
+        <div class="ctx-item" id="ctx-edit">✏️ Edit</div>
+        <hr>
+        <div class="ctx-item danger" id="ctx-delete">🗑️ Delete</div>
+        <hr>
+    </div>
+
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">Variables</div>
+            <div id="variable-fields"></div>
+            <div class="modal-actions">
+                <button id="btn-modal-cancel" class="btn-cancel">Cancel</button>
+                <button id="btn-modal-copy" class="btn-confirm">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay" class="settings-overlay hidden">
+<div class="settings-box" style="padding: 20px 15px;">
+
+    <h3 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
+        User Information
+    </h3>
+
+    <div style="margin-bottom: 20px;">
+        <label style="display:block; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant); font-size: 0.9em;">Display Name</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="username-input" placeholder="e.g. user">
+            <button id="btn-save-username" class="btn-secondary">Save</button>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 25px;">
+        <label style="display:block; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant); font-size: 0.9em;">Interface Theme</label>
+        <select id="theme-selector">
+            <option value="theme-dark">🌙 Dark (Default)</option>
+            <option value="theme-light">☀️ Light</option>
+            <option value="theme-hacker">👾 Hacker</option>
+            <option value="theme-ocean">🌊 Ocean</option>
+            <option value="theme-teradata">🟠 Teradata</option>
+        </select>
+    </div>
+    
+    <h3 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
+        Cloud Sync
+    </h3>
+    
+    <div style="margin-bottom: 20px;">
+        <label style="display:block; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant); font-size: 0.9em;">GitHub Access Token</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="password" id="gh-token-input" placeholder="ghp_...">
+            <button id="btn-save-token" class="btn-secondary">Save</button>
+        </div>
+    </div>
+    
+    <div class="sync-actions" style="margin-bottom: 25px; display: flex; gap: 10px;">
+        <button id="btn-sync-upload" class="btn-gh upload" disabled style="flex:1; height: 38px;">⬆️ Push</button>
+        <button id="btn-sync-download" class="btn-gh download" disabled style="flex:1; height: 38px;">⬇️ Fetch</button>
+    </div>
+    
+    <h3 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
+        Data Management
+    </h3>
+    
+    <div style="display:flex; gap:10px; margin-bottom: 25px;">
+        <button id="btn-export" class="icon-btn" style="flex:1;">💾 Backup</button>
+        <button id="btn-import" class="icon-btn" style="flex:1;">📂 Import</button>
+        <button id="btn-reset" class="icon-btn danger" style="flex:1;">🗑️ Reset</button>
+    </div>
+
+    <hr style="margin: 20px 0 15px 0; border: 0; border-top: 1px solid var(--md-sys-color-outline); opacity: 0.2;">
+    
+    <div style="text-align: center; font-size: 11px; color: var(--md-sys-color-on-surface-variant); opacity: 0.8;">
+        <span style="font-size: 1.2em; vertical-align: middle; margin-right: 4px;">💻</span>
+        Created by <strong>Ivan Cedeno</strong> @ Teradata 2026
+    </div>
+
+</div>
+    </div>
+</body>
+</html>

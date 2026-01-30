@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "DEV_ENV 💻 CmdVault V1.0 ",
+  "version": "1.0",
+  "description": "Extension to store and manage sys-admin commands",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs"
+    
+  ],
+  
+ "icons": {
+  "16": "icon.png", "48": "icon.png", "128": "icon.png" },
+
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Abrir Helper"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+  
+}
