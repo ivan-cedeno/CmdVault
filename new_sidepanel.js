@@ -13,27 +13,22 @@ let appClipboard = null;
 let ghToken = ""; 
 let currentTheme = "theme-dark"; 
 let toastTimeout = null; 
-let isDataLoaded = false; // BANDERA DE SEGURIDAD
+let isDataLoaded = false; 
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 V13.0 Critical Data Fix...");
-    
-    // Inyectar y configurar UI primero
+    console.log("🚀 V14.2 Context Menu Injection Fix...");
     try {
-        injectContextMenu();
+        injectContextMenu(); // Fix de inyección granular
         setupAppEvents();
         setupDocking();
         renderColors();
     } catch(e) { console.error("UI Init Error:", e); }
-
-    // Cargar datos al final
     loadDataFromStorage();
 });
 
-// --- CARGA DE DATOS (PROTEGIDA) ---
+// --- CARGA DE DATOS ---
 function loadDataFromStorage() {
-    console.log("📥 Loading Data...");
     chrome.storage.local.get(null, (items) => {
         if (chrome.runtime.lastError) {
             console.error("Storage Error:", chrome.runtime.lastError);
@@ -42,22 +37,16 @@ function loadDataFromStorage() {
         }
 
         try {
-            // 1. Recuperar Árbol
             if (Array.isArray(items.linuxTree)) {
                 treeData = cleanNodes(items.linuxTree);
-                console.log(`✅ Loaded ${treeData.length} root items.`);
             } else {
-                console.log("ℹ️ No existing tree found.");
                 treeData = [];
             }
         } catch (e) {
-            console.error("Data corruption during load:", e);
             treeData = [];
         }
 
-        // 2. Rescate si está vacío
         if (treeData.length === 0) {
-            console.log("⚠️ Tree empty. Creating default rescue root.");
             treeData.push({
                 id: genId(),
                 name: "My Commands",
@@ -66,22 +55,17 @@ function loadDataFromStorage() {
                 collapsed: false,
                 color: FOLDER_COLORS[0]
             });
-            // NOTA: Forzamos isDataLoaded true temporalmente para permitir este guardado inicial
             isDataLoaded = true; 
             saveData();
         }
 
-        // 3. Recuperar Configuración
         commandHistory = Array.isArray(items.linuxHistory) ? items.linuxHistory : [];
         qaCollapsed = items.qaCollapsed || false;
         historyCollapsed = items.historyCollapsed || false;
-        
-        // FIX CRÍTICO: Forzar visibilidad al inicio para evitar "datos invisibles"
         commandsCollapsed = false; 
         
         ghToken = items.ghToken || "";
         
-        // 4. Restaurar UI
         if (items.savedTheme) changeTheme(items.savedTheme);
         
         const tokenInput = document.getElementById('gh-token-input');
@@ -93,8 +77,7 @@ function loadDataFromStorage() {
         const title = document.querySelector('.app-title');
         if (title) title.textContent = `${items.username || 'user'}@CmdVault:~$`;
 
-        // 5. Marcar como cargado y renderizar
-        isDataLoaded = true; // AHORA es seguro guardar cambios futuros
+        isDataLoaded = true;
         refreshAll();
     });
 }
@@ -108,28 +91,16 @@ function cleanNodes(nodes) {
             if (!Array.isArray(n.children)) n.children = [];
             n.children = cleanNodes(n.children);
         }
-        // Asegurar campos mínimos
         n.name = n.name || "Untitled";
         return n;
     }).filter(n => n !== null);
 }
 
-// --- GUARDADO SEGURO ---
 function saveData() {
-    // PROTECCIÓN: No guardar si los datos no han cargado (evita sobrescribir con [])
-    if (!isDataLoaded) {
-        console.warn("⛔ Prevented save before load.");
-        return;
-    }
-
+    if (!isDataLoaded) return;
     chrome.storage.local.set({ linuxTree: treeData }, () => {
-        if (chrome.runtime.lastError) {
-            console.error("❌ Save Failed:", chrome.runtime.lastError);
-            showToast("❌ Save Failed (Check Console)");
-        } else {
-            // Solo sincronizar si el guardado local fue exitoso
-            if (ghToken) autoSyncToCloud();
-        }
+        if (chrome.runtime.lastError) showToast("❌ Save Failed");
+        else if (ghToken) autoSyncToCloud();
     });
 }
 
@@ -140,7 +111,6 @@ function saveGlobalState() {
 function refreshAll() {
     const search = document.getElementById('search-input');
     const filter = search ? search.value.toLowerCase() : '';
-    
     renderTree(filter);
     renderHistory();
     renderFavorites();
@@ -163,7 +133,6 @@ function renderTree(filter) {
     if (!container) return;
     
     container.innerHTML = '';
-    // Asegurar visualización
     container.style.display = (commandsCollapsed && !filter) ? 'none' : 'block';
 
     if (treeData.length === 0) {
@@ -180,18 +149,14 @@ function renderTree(filter) {
 }
 
 function createNodeElement(node, filter, isFav = false) {
-    const wrapper = document.createElement('div');
     const row = document.createElement('div');
     row.className = `tree-item type-${node.type}`;
     
-    // Estado Visual Cut
     if (appClipboard && appClipboard.action === 'cut' && String(appClipboard.id) === String(node.id)) {
         row.classList.add('cut-state');
     }
 
-    if (!isFav && !filter) {
-        attachDragEvents(row, node);
-    }
+    if (!isFav && !filter) attachDragEvents(row, node);
 
     const header = document.createElement('div');
     header.className = 'item-header';
@@ -244,7 +209,6 @@ function createNodeElement(node, filter, isFav = false) {
     if (node.type === 'command') {
         const wrap = document.createElement('div');
         wrap.className = 'cmd-wrapper';
-        
         const pre = document.createElement('pre');
         pre.className = node.expanded ? 'cmd-preview expanded' : 'cmd-preview';
         pre.innerHTML = highlightSyntax(String(node.cmd || ""));
@@ -264,6 +228,8 @@ function createNodeElement(node, filter, isFav = false) {
         wrap.appendChild(btn);
         row.appendChild(wrap);
     }
+    
+    const wrapper = document.createElement('div');
     wrapper.appendChild(row);
 
     if (!isFav && node.children && node.type === 'folder') {
@@ -282,17 +248,13 @@ function createNodeElement(node, filter, isFav = false) {
             wrapper.appendChild(inner);
         }
     }
-
     return wrapper;
 }
 
 // --- SETUP EVENTOS ---
 function setupAppEvents() {
-    // Headers
     bindClick('qa-header', () => { qaCollapsed = !qaCollapsed; saveGlobalState(); refreshAll(); });
     bindClick('history-header', () => { historyCollapsed = !historyCollapsed; saveGlobalState(); refreshAll(); });
-    
-    // Commands Header: Toggle normal
     bindClick('commands-header', () => { 
         commandsCollapsed = !commandsCollapsed; 
         saveGlobalState(); 
@@ -313,14 +275,9 @@ function setupAppEvents() {
         showToast("🧹 Clipboard Cleared");
     });
 
-    // Settings UI
     const sOverlay = document.getElementById('settings-overlay');
-    bindClick('btn-settings', () => { 
-        if (sOverlay) sOverlay.classList.remove('hidden'); 
-    });
-    bindClick('btn-close-settings', () => { 
-        if (sOverlay) sOverlay.classList.add('hidden'); 
-    });
+    bindClick('btn-settings', () => { if (sOverlay) sOverlay.classList.remove('hidden'); });
+    bindClick('btn-close-settings', () => { if (sOverlay) sOverlay.classList.add('hidden'); });
     if (sOverlay) sOverlay.onclick = (e) => { if (e.target === sOverlay) sOverlay.classList.add('hidden'); };
 
     bindClick('btn-save-username', () => {
@@ -346,7 +303,6 @@ function setupAppEvents() {
         chrome.storage.local.set({ savedTheme: e.target.value });
     };
 
-    // Close Context Menu
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.context-menu')) {
             const cm = document.getElementById('context-menu');
@@ -354,7 +310,6 @@ function setupAppEvents() {
         }
     });
 
-    // Menu Item Clicks
     const ctxMenu = document.getElementById('context-menu');
     if (ctxMenu) {
         ctxMenu.onclick = (e) => {
@@ -368,6 +323,10 @@ function setupAppEvents() {
             if (id === 'ctx-copy') { execCopy(); close(); }
             else if (id === 'ctx-cut') { execCut(); close(); }
             else if (id === 'ctx-paste') { execPaste(); close(); }
+            // NEW ACTIONS
+            else if (id === 'ctx-expand-all') { toggleFolderRecursively(contextTargetId, false); close(); }
+            else if (id === 'ctx-collapse-all') { toggleFolderRecursively(contextTargetId, true); close(); }
+            
             else if (id === 'ctx-pin-toggle') { togglePin(contextTargetId); close(); }
             else if (id === 'ctx-delete') { if(confirm("Delete?")) execDelete(contextTargetId); close(); }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
@@ -407,25 +366,19 @@ function attachDragEvents(row, node) {
 
     row.ondragover = (e) => {
         e.preventDefault(); e.stopPropagation();
-        
         if (draggedId === node.id) return;
-
         const isFolderEmpty = (node.type === 'folder') && (!node.children || node.children.length === 0);
-        
         row.style.borderTop = ''; row.style.borderBottom = ''; row.classList.remove('drop-inside');
-
         if (isFolderEmpty) {
             row.classList.add('drop-inside'); 
             e.dataTransfer.dropEffect = 'copy';
             return;
         }
-
         const rect = row.getBoundingClientRect();
         const offsetY = e.clientY - rect.top;
         const h = rect.height;
         const isCommand = node.type === 'command';
         const threshold = isCommand ? h * 0.5 : h * 0.25;
-
         if (offsetY < threshold) {
             row.style.borderTop = '2px solid var(--md-sys-color-primary)';
             e.dataTransfer.dropEffect = 'move';
@@ -447,24 +400,20 @@ function attachDragEvents(row, node) {
     row.ondrop = (e) => {
         e.preventDefault(); e.stopPropagation();
         clearDragStyles();
-
         const sourceId = draggedId;
         if (sourceId && String(sourceId) !== String(node.id)) {
             let action = 'inside';
             const isFolderEmpty = (node.type === 'folder') && (!node.children || node.children.length === 0);
-
             if (!isFolderEmpty) {
                 const rect = row.getBoundingClientRect();
                 const offsetY = e.clientY - rect.top;
                 const h = rect.height;
                 const isCommand = node.type === 'command';
                 const threshold = isCommand ? h * 0.5 : h * 0.25;
-
                 if (offsetY < threshold) action = 'before';
                 else if (isCommand || offsetY > (h - threshold)) action = 'after';
                 else action = 'inside';
             }
-
             performMove(sourceId, node.id, action);
         }
     };
@@ -472,13 +421,11 @@ function attachDragEvents(row, node) {
 
 function performMove(sourceId, targetId, action) {
     if (String(sourceId) === String(targetId)) return;
-    
     const sourceList = findParentList(treeData, sourceId);
     if (!sourceList) return;
     const sIdx = sourceList.findIndex(n => String(n.id) === String(sourceId));
     if (sIdx === -1) return;
     const item = sourceList.splice(sIdx, 1)[0];
-
     if (action === 'inside') {
         const target = findNode(treeData, targetId);
         if (target && target.type === 'folder') {
@@ -491,8 +438,8 @@ function performMove(sourceId, targetId, action) {
     } else {
         const targetList = findParentList(treeData, targetId);
         if (targetList) {
-            const tIdx = targetList.findIndex(n => String(n.id) === String(targetId));
-            const insertIdx = action === 'after' ? tIdx + 1 : tIdx;
+            const targetIdx = targetList.findIndex(n => String(n.id) === String(targetId));
+            const insertIdx = action === 'after' ? targetIdx + 1 : targetIdx;
             targetList.splice(insertIdx, 0, item);
         } else {
             treeData.push(item);
@@ -532,12 +479,9 @@ function execPaste() {
     if (appClipboard.action === 'cut') {
         const sourceId = appClipboard.id;
         const targetId = contextTargetId;
-        
         if (isDescendant(sourceId, targetId)) return showToast("❌ Recursion Error");
         
-        // FIX VISUAL: Limpiar clipboard ANTES de mover y refrescar
-        appClipboard = null;
-        
+        appClipboard = null; // Clean before move to clear visuals
         performMove(sourceId, targetId, 'inside');
         showToast("✅ Moved");
     } 
@@ -585,6 +529,26 @@ function execEdit(id) {
             refreshAll();
         }
     }
+}
+
+// --- NEW RECURSIVE ACTIONS ---
+function toggleFolderRecursively(id, shouldCollapse) {
+    const targetNode = findNode(treeData, id);
+    if (!targetNode) return;
+    
+    // Función recursiva interna
+    const traverse = (node) => {
+        if (node.type === 'folder') {
+            node.collapsed = shouldCollapse;
+            if (node.children && Array.isArray(node.children)) {
+                node.children.forEach(traverse);
+            }
+        }
+    };
+
+    traverse(targetNode);
+    saveData();
+    refreshAll();
 }
 
 function addItemToTree(parentId, item) {
@@ -672,7 +636,6 @@ function copyToClipboard(text, name = "Command") {
     if (idx !== -1) commandHistory.splice(idx, 1);
     
     commandHistory.unshift({ cmd: text, name: name });
-    
     if (commandHistory.length > 5) commandHistory.pop();
     
     chrome.storage.local.set({ linuxHistory: commandHistory });
@@ -689,17 +652,27 @@ function showToast(m) {
     }
 }
 
+// --- INYECCIÓN DE CONTEXT MENU (FIX) ---
 function injectContextMenu() {
     const menu = document.getElementById('context-menu');
-    if (!menu || document.getElementById('ctx-copy')) return;
-    const html = `
+    if (!menu) return;
+
+    // Verificar si ya existe expand-all para no duplicar
+    if (document.getElementById('ctx-expand-all')) return;
+
+    // HTML de los botones nuevos + clipboard si falta
+    const newItems = `
         <hr>
-        <div class="ctx-item" id="ctx-copy">📋 Copy</div>
-        <div class="ctx-item" id="ctx-cut">✂️ Cut</div>
-        <div class="ctx-item" id="ctx-paste" style="display:none">📋 Paste</div>
+        <div class="ctx-item" id="ctx-expand-all" style="display:none">🔽 Expand All</div>
+        <div class="ctx-item" id="ctx-collapse-all" style="display:none">▶️ Collapse All</div>
+        <hr>
     `;
-    const ref = document.getElementById('ctx-edit');
-    if (ref) ref.insertAdjacentHTML('beforebegin', html);
+    
+    // Insertar ANTES de las opciones de portapapeles si existen, o antes de Editar
+    const ref = document.getElementById('ctx-copy') || document.getElementById('ctx-edit');
+    if (ref) {
+        ref.insertAdjacentHTML('beforebegin', newItems);
+    }
 }
 
 function openContextMenu(e, node) {
@@ -709,6 +682,13 @@ function openContextMenu(e, node) {
     document.getElementById('ctx-folder-section').style.display = isFolder ? 'block' : 'none';
     document.getElementById('ctx-cmd-section').style.display = 'block';
     
+    // VISIBILIDAD EXPAND/COLLAPSE
+    const expandBtn = document.getElementById('ctx-expand-all');
+    const collapseBtn = document.getElementById('ctx-collapse-all');
+    if(expandBtn) expandBtn.style.display = isFolder ? 'flex' : 'none';
+    if(collapseBtn) collapseBtn.style.display = isFolder ? 'flex' : 'none';
+
+    // VISIBILIDAD PASTE
     const pasteBtn = document.getElementById('ctx-paste');
     if (pasteBtn) {
         if (appClipboard && isFolder) {
