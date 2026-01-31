@@ -135,14 +135,14 @@ function createNode(node, filter, isQuickAccess = false) {
     const row = document.createElement('div');
     row.className = `tree-item type-${node.type}`;
     
-    // --- LÓGICA DE DRAG & DROP V2.4 (FIX CURSOR PROHIBIDO) ---
+    // --- LÓGICA DE DRAG & DROP V2.5 (SENSIBILIDAD MEJORADA) ---
     if (!isQuickAccess && !filter) {
         row.draggable = true;
         
         row.ondragstart = (e) => { 
             draggedId = node.id; 
             e.dataTransfer.setData('text/plain', String(node.id));
-            e.dataTransfer.effectAllowed = 'move'; // Definimos que la intención es MOVER
+            e.dataTransfer.effectAllowed = 'move'; 
             row.classList.add('dragging'); 
         };
         
@@ -159,44 +159,51 @@ function createNode(node, filter, isQuickAccess = false) {
         row.ondragover = (e) => { 
             e.preventDefault(); e.stopPropagation();
             
-            // Verificamos identidad
-            const currentId = draggedId || e.dataTransfer.getData('text/plain'); // Nota: getData suele estar vacío en dragover
-            // Si draggedId está disponible, lo usamos para validación rápida
-            if (draggedId && String(draggedId) === String(node.id)) return;
+            const currentId = draggedId || e.dataTransfer.getData('text/plain');
+            if (currentId && String(currentId) === String(node.id)) return;
 
             const isFolderEmpty = node.type === 'folder' && (!node.children || node.children.length === 0);
 
-            // --- LÓGICA IMÁN VISUAL ---
+            // 1. IMÁN VISUAL (Prioridad Absoluta para carpetas vacías)
             if (isFolderEmpty) {
                 if (!row.classList.contains('drop-inside')) row.classList.add('drop-inside');
                 row.style.borderTop = ''; row.style.borderBottom = '';
-                
-                // CRÍTICO: Debe ser 'move' para coincidir con dragstart y evitar el icono 🚫
-                e.dataTransfer.dropEffect = 'move';  
+                e.dataTransfer.dropEffect = 'move'; // Match con dragstart
                 return; 
             }
 
+            // 2. GEOMETRÍA OPTIMIZADA
             const rect = row.getBoundingClientRect();
             const offsetY = e.clientY - rect.top;     
             const height = rect.height;
-            const threshold = height * 0.25;          
+            
+            // DEFINICIÓN DE UMBRALES DINÁMICOS
+            // Si es Comando: 50% (Mitad Arriba = Before, Mitad Abajo = After) -> Super fácil reordenar
+            // Si es Carpeta: 25% (Zonas laterales pequeñas para reordenar, centro grande para anidar)
+            const isCommand = node.type === 'command';
+            const threshold = isCommand ? height * 0.5 : height * 0.25;
 
             row.style.borderTop = ''; row.style.borderBottom = ''; row.classList.remove('drop-inside');
 
             if (offsetY < threshold) {
+                // Zona Superior -> Insertar Antes
                 row.style.borderTop = '2px solid var(--md-sys-color-primary)';
                 e.dataTransfer.dropEffect = 'move';
-            } else if (offsetY > (height - threshold)) {
+            } 
+            else if (isCommand) {
+                // Zona Inferior (Comandos) -> Insertar Después (Cubre el 50% restante)
                 row.style.borderBottom = '2px solid var(--md-sys-color-primary)';
                 e.dataTransfer.dropEffect = 'move';
-            } else {
-                if (node.type === 'folder') {
-                    row.classList.add('drop-inside');
-                    e.dataTransfer.dropEffect = 'move'; // También aquí usamos 'move'
-                } else {
-                    row.style.borderBottom = '2px solid var(--md-sys-color-primary)';
-                    e.dataTransfer.dropEffect = 'move';
-                }
+            }
+            else if (offsetY > (height - threshold)) {
+                // Zona Inferior (Carpetas) -> Insertar Después
+                row.style.borderBottom = '2px solid var(--md-sys-color-primary)';
+                e.dataTransfer.dropEffect = 'move';
+            } 
+            else {
+                // Zona Central (Solo Carpetas) -> Anidar
+                row.classList.add('drop-inside');
+                e.dataTransfer.dropEffect = 'move';
             }
         };
 
@@ -216,21 +223,29 @@ function createNode(node, filter, isQuickAccess = false) {
             if (sourceId && String(sourceId) !== String(node.id)) {
                 let action = '';
                 
-                // --- LÓGICA PURA DE DATOS ---
+                // Lógica de datos
                 const isFolderEmpty = node.type === 'folder' && (!node.children || node.children.length === 0);
 
                 if (isFolderEmpty) {
-                    console.log("🧲 DROP V2.4: Carpeta Vacía -> INSIDE");
-                    action = 'inside';
+                    action = 'inside'; // Imán
                 } else {
+                    // Recalcular geometría con los MISMOS umbrales que dragover
                     const rect = row.getBoundingClientRect();
                     const offsetY = e.clientY - rect.top;
                     const height = rect.height;
-                    const threshold = height * 0.25;
+                    const isCommand = node.type === 'command';
+                    const threshold = isCommand ? height * 0.5 : height * 0.25;
 
-                    if (offsetY < threshold) action = 'before';
-                    else if (offsetY > (height - threshold)) action = 'after';
-                    else action = (node.type === 'folder') ? 'inside' : 'after';
+                    if (offsetY < threshold) {
+                        action = 'before';
+                    } else if (isCommand) {
+                        // Si es comando y no fue 'before', entonces es 'after' (mitad inferior)
+                        action = 'after';
+                    } else if (offsetY > (height - threshold)) {
+                        action = 'after';
+                    } else {
+                        action = 'inside';
+                    }
                 }
                 
                 handleDropItem(sourceId, node.id, action);
@@ -609,32 +624,21 @@ function findParentArray(list, targetId) {
 function handleDropItem(dId, tId, position) {
     console.log("🛠️ handleDropItem:", dId, "->", tId, "(", position, ")");
     if (String(dId) === String(tId)) return; 
-    
-    // Primero, encontrar el item para moverlo
     const item = findAndRemove(treeData, dId);
     if (!item) { console.error("❌ Item original no encontrado"); return; }
 
-    // Lógica para 'inside' (carpetas)
     if (position === 'inside') {
         const targetFolder = findItemById(treeData, tId);
         if (targetFolder) {
-            // Asegurarse de que el array children exista
             if (!targetFolder.children) targetFolder.children = [];
-            
-            // Empujar al final del array children
             targetFolder.children.push(item);
-            
-            // Abrir carpeta para ver el resultado
             targetFolder.collapsed = false; 
             console.log("✅ Movido INSIDE con éxito");
         } else {
-            // Fallback si no encuentra la carpeta destino (raro)
             console.warn("⚠️ Carpeta destino no encontrada, moviendo a raíz");
             treeData.push(item);
         }
-    } 
-    // Lógica para 'before' / 'after' (reordenar)
-    else {
+    } else {
         const parentArr = findParentArray(treeData, tId);
         if (parentArr) {
             const index = parentArr.findIndex(x => String(x.id) === String(tId));
@@ -644,7 +648,6 @@ function handleDropItem(dId, tId, position) {
                 console.log("✅ Reordenado con éxito");
             }
         } else {
-            // Fallback
             treeData.push(item);
         }
     }
