@@ -606,11 +606,43 @@ function execDelete(id) {
 function execAdd(parentId, type) {
     if (type === 'folder') {
         const n = prompt("Folder Name:");
+        // Nota: Aquí ya usa FOLDER_COLORS[0] que acabamos de cambiar a Perla
         if (n) addItemToTree(parentId, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: FOLDER_COLORS[0] });
     } else {
-        const n = prompt("Name:");
+        // --- RESTAURACIÓN DE LA SECUENCIA DE PROMPTS DE V1 ---
+        
+        // 1. Nombre
+        const n = prompt("Name:"); 
+        if (!n) return; // Si cancela el nombre, abortamos igual que en V1
+
+        // 2. Descripción (Faltaba en V2)
+        const d = prompt("Description:");
+
+        // 3. Comando
         const c = prompt("Command:");
-        if (n && c) addItemToTree(parentId, { id: genId(), name: n, cmd: c, type: 'command', icon: '⚡' });
+
+        // 4. Tags (Faltaba en V2)
+        const t = prompt("Tags (comma separated):");
+
+        // Procesamiento de Tags (Lógica exacta de V1 para mantener compatibilidad CSS)
+        let tagsArray = [];
+        if (t) {
+            tagsArray = t.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
+        }
+
+        if (c) {
+            // Construimos el objeto completo con todas las propiedades
+            addItemToTree(parentId, { 
+                id: genId(), 
+                name: n, 
+                description: d || "", // Guardamos descripción
+                cmd: c, 
+                tags: tagsArray,      // Guardamos el array de tags para que se activen los badges
+                type: 'command', 
+                icon: '⚡', 
+                expanded: false 
+            });
+        }
     }
 }
 
