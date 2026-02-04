@@ -863,10 +863,27 @@ function setupDocking() {
 // Helpers Varios
 function isVisible(n, f) {
     if (!f) return true;
-    const txt = f.toLowerCase();
-    const match = (n.name||'').toLowerCase().includes(txt) || (n.cmd||'').toLowerCase().includes(txt);
-    if (match) return true;
-    return n.children && n.children.some(c => isVisible(c, f));
+    const query = f.trim().toLowerCase();
+
+    // 1. Lógica V1: Búsqueda específica por Tags usando "#" (ej: #redes)
+    if (query.startsWith('#')) {
+        const tagToSearch = query.substring(1);
+        // Validamos que n.tags exista y sea un array antes de buscar
+        const tagMatch = Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes(tagToSearch));
+        
+        // Si el nodo cumple, es visible. Si no, revisamos si algún hijo cumple (para mostrar la carpeta padre)
+        return n.children ? (tagMatch || n.children.some(c => isVisible(c, f))) : tagMatch;
+    }
+
+    // 2. Lógica V1: Búsqueda General (Nombre, Comando o Tags)
+    const nameMatch = (n.name || '').toLowerCase().includes(query);
+    const cmdMatch = (n.cmd || '').toLowerCase().includes(query);
+    const tagMatch = Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes(query));
+
+    const selfMatch = nameMatch || cmdMatch || tagMatch;
+
+    // Retorna true si el nodo coincide O si alguno de sus hijos coincide (recursividad)
+    return n.children ? (selfMatch || n.children.some(c => isVisible(c, f))) : selfMatch;
 }
 
 function highlightSyntax(c) {
