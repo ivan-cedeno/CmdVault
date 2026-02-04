@@ -1,4 +1,5 @@
 const FOLDER_COLORS = ['#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#7C4DFF','#CFD8DC','#424242'];
+
 const GIST_FILENAME = 'ivan_helper_backup.json';
 
 // --- ESTADO GLOBAL ---
@@ -290,9 +291,14 @@ function setupAppEvents() {
     });
 
     bindClick('btn-save-token', () => {
-        const t = document.getElementById('gh-token-input').value.trim();
-        if (t) { ghToken = t; chrome.storage.local.set({ ghToken: t }, () => showToast("💾 Saved")); }
+    const t = document.getElementById('gh-token-input').value.trim();
+    // Agregamos updateSettingsUI() para habilitar los botones visualmente tras guardar
+        if (t) { ghToken = t; chrome.storage.local.set({ ghToken: t }, () => { showToast("💾 Saved"); updateSettingsUI(); }); }
     });
+    bindClick('btn-sync-upload', () => uploadToGist());
+    bindClick('btn-sync-download', () => downloadFromGist());
+
+
 
     const search = document.getElementById('search-input');
     if (search) search.oninput = (e) => refreshAll();
@@ -338,6 +344,95 @@ function setupAppEvents() {
             }
         };
     }
+
+    // --- DATA MANAGEMENT (Backup/Restore/Reset) [MIGRADO] ---
+
+    // 1. Exportar (Backup Local)
+    bindClick('btn-export', () => {
+        if (!treeData || treeData.length === 0) return showToast("⚠️ Nothing to backup");
+        
+        const dataStr = JSON.stringify(treeData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        // Agregamos fecha al nombre para mejor organización
+        const date = new Date().toISOString().slice(0,10);
+        a.download = `cmdvault_backup_${date}.json`;
+        document.body.appendChild(a); // Requerido en algunos contextos de navegador
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("💾 Backup Downloaded");
+    });
+
+    // 2. Importar (Restaurar Local)
+    const fileInput = document.getElementById('file-input');
+    bindClick('btn-import', () => {
+        if(fileInput) fileInput.click();
+    });
+
+    if (fileInput) {
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const importedData = JSON.parse(ev.target.result);
+                    
+                    // Validación básica para asegurar que es un formato válido
+                    if (Array.isArray(importedData)) {
+                        treeData = importedData;
+                        saveData();     // Guardar en Storage
+                        refreshAll();   // Actualizar UI V2
+                        showToast("✅ Import Successful");
+                    } else {
+                        alert("Error: Invalid JSON format (Expected an Array)");
+                    }
+                } catch (ex) {
+                    console.error(ex);
+                    alert("Error parsing JSON file. Please check the file.");
+                }
+                // Limpiar input para permitir importar el mismo archivo nuevamente si es necesario
+                fileInput.value = '';
+            };
+            reader.readAsText(file);
+        };
+    }
+
+    // 3. Factory Reset
+    bindClick('btn-reset', () => {
+        if (confirm("⚠️ DANGER ZONE \n\nAre you sure you want to delete ALL commands and history? This action cannot be undone.")) {
+            // Reiniciamos a estado limpio pero funcional (con una carpeta raíz)
+            treeData = [{
+                id: genId(),
+                name: "My Commands",
+                type: "folder",
+                children: [],
+                collapsed: false,
+                color: FOLDER_COLORS[0]
+            }];
+            commandHistory = [];
+            
+            // Limpiamos storage y variables
+            chrome.storage.local.set({ linuxTree: treeData, linuxHistory: [] }, () => {
+                refreshAll();
+                showToast("🗑️ Factory Reset Complete");
+                // Opcional: Cerrar el panel de settings para ver el resultado
+                const settingsOverlay = document.getElementById('settings-overlay');
+                if(settingsOverlay) settingsOverlay.classList.add('hidden');
+            });
+        }
+    });
+
+
+
+
+
 }
 
 function bindClick(id, fn) {
@@ -814,7 +909,154 @@ function renderHistory() {
 }
 
 function updateSettingsUI() {
+    // 1. Actualizar Input
     const tInput = document.getElementById('gh-token-input');
-    if(tInput) tInput.value = ghToken;
+    if(tInput) tInput.value = ghToken || "";
+
+    // 2. Controlar estado de los botones (Habilitar/Deshabilitar)
+    const btnUp = document.getElementById('btn-sync-upload');
+    const btnDown = document.getElementById('btn-sync-download');
+
+    if (ghToken) {
+        if(btnUp) { btnUp.disabled = false; btnUp.style.opacity = "1"; btnUp.style.cursor = "pointer"; }
+        if(btnDown) { btnDown.disabled = false; btnDown.style.opacity = "1"; btnDown.style.cursor = "pointer"; }
+    } else {
+        if(btnUp) { btnUp.disabled = true; btnUp.style.opacity = "0.5"; btnUp.style.cursor = "not-allowed"; }
+        if(btnDown) { btnDown.disabled = true; btnDown.style.opacity = "0.5"; btnDown.style.cursor = "not-allowed"; }
+    }
 }
-async function autoSyncToCloud() { /* Placeholder */ }
+// En new_sidepanel.js (Reemplazar la función placeholder autoSyncToCloud y agregar el resto)
+
+// --- GITHUB SYNC ENGINE (MIGRADO DE V1) ---
+
+function updateSyncIcon(state) {
+    const icon = document.getElementById('sync-indicator'); 
+    if (!icon) return; // Protección por si el elemento no existe en el HTML V2
+    if (state === 'working') { 
+        icon.classList.add('sync-working'); 
+        icon.classList.remove('sync-success'); 
+    } else if (state === 'success') { 
+        icon.classList.remove('sync-working'); 
+        icon.classList.add('sync-success'); 
+        setTimeout(() => icon.classList.remove('sync-success'), 3000); 
+    }
+}
+
+async function uploadToGist(isRetry = false) {
+    if (!ghToken) return showToast("❌ Save GitHub Token first");
+    
+    if (!isRetry) showToast("☁️ Syncing with GitHub...");
+
+    const body = {
+        description: "Ivan's Helper Backup (CmdVault)",
+        public: false,
+        files: { [GIST_FILENAME]: { content: JSON.stringify(treeData, null, 2) } }
+    };
+
+    let gistId = localStorage.getItem('gistId');
+    let url = 'https://api.github.com/gists';
+    let method = 'POST';
+
+    if (gistId) {
+        url = `https://api.github.com/gists/${gistId}`;
+        method = 'PATCH';
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 
+                'Authorization': `Bearer ${ghToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (response.status === 403 || response.status === 429) {
+            throw new Error(`⏳ GitHub Rate Limit. Try later.`);
+        }
+
+        if (response.status === 404 && gistId) {
+            if (isRetry) throw new Error("Check token permissions.");
+            console.warn("⚠️ Gist missing. Creating new...");
+            localStorage.removeItem('gistId');
+            return await uploadToGist(true); 
+        }
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || `Error ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.id) localStorage.setItem('gistId', data.id);
+
+        showToast("✅ Backup uploaded");
+        updateSyncIcon('success');
+
+    } catch (e) {
+        console.error("Gist Error:", e);
+        showToast(e.message.includes("Rate Limit") ? e.message : `❌ Error: ${e.message}`);
+    }
+}
+
+async function downloadFromGist() {
+    if (!ghToken) return showToast("❌ Save GitHub Token first");
+    showToast("📥 Downloading...");
+
+    try {
+        const responseGists = await fetch('https://api.github.com/gists', {
+            headers: { 'Authorization': `token ${ghToken}` }
+        });
+        const gists = await responseGists.json();
+        const remoteGist = gists.find(g => g.files && g.files[GIST_FILENAME]);
+
+        if (!remoteGist) return showToast("❓ No backup found");
+
+        // Guardamos el ID para futuras sincronizaciones
+        localStorage.setItem('gistId', remoteGist.id);
+
+        const rawData = await fetch(remoteGist.files[GIST_FILENAME].raw_url);
+        const data = await rawData.json();
+
+        if (data) {
+            treeData = data;
+            // IMPORTANTE: Aquí adaptamos a la V2 usando refreshAll()
+            chrome.storage.local.set({linuxTree: treeData}, () => {
+                refreshAll(); 
+            });
+            showToast("✅ Data restored");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Download error");
+    }
+}
+
+async function autoSyncToCloud() {
+    if (!ghToken) return;
+    updateSyncIcon('working');
+    try {
+        // Lógica simplificada para auto-guardado: solo actualiza si ya existe un ID conocido
+        // para evitar crear Gists infinitos accidentalmente.
+        let gistId = localStorage.getItem('gistId');
+        if (!gistId) return; 
+
+        const body = {
+            files: { [GIST_FILENAME]: { content: JSON.stringify(treeData, null, 2) } }
+        };
+
+        const finalResponse = await fetch(`https://api.github.com/gists/${gistId}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `token ${ghToken}` },
+            body: JSON.stringify(body)
+        });
+
+        if (finalResponse.ok) {
+            updateSyncIcon('success');
+        }
+    } catch (e) {
+        console.error("Auto-sync failed", e);
+    }
+}
