@@ -830,7 +830,7 @@ function openContextMenu(e, node) {
         // A. Lógica de Iconos (Ocultar en carpetas, mostrar en comandos)
         const iconSelector = cmdSection.querySelector('.icon-selector');
         if (iconSelector) {
-            iconSelector.style.display = isFolder ? 'none' : 'flex';
+            iconSelector.style.display = isFolder ? 'none' : 'grid';
         }
 
         // B. Lógica de Pin/Unpin
