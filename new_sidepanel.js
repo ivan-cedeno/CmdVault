@@ -20,10 +20,10 @@ let isDataLoaded = false;
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 V14.2 Context Menu Injection Fix...");
     try {
-        injectContextMenu(); // Fix de inyección granular
+        injectContextMenu(); 
         setupAppEvents();
         setupDocking();
-        renderColors();
+        renderColorPalette(); // <--- ✅ CORRECCIÓN: Usar el nombre real de la función
     } catch(e) { console.error("UI Init Error:", e); }
     loadDataFromStorage();
 });
