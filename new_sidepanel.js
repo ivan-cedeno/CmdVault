@@ -806,16 +806,47 @@ function openContextMenu(e, node) {
     const menu = document.getElementById('context-menu');
     const isFolder = node.type === 'folder';
     
-    document.getElementById('ctx-folder-section').style.display = isFolder ? 'block' : 'none';
-    document.getElementById('ctx-cmd-section').style.display = 'block';
-    
-    // VISIBILIDAD EXPAND/COLLAPSE
-    const expandBtn = document.getElementById('ctx-expand-all');
-    const collapseBtn = document.getElementById('ctx-collapse-all');
-    if(expandBtn) expandBtn.style.display = isFolder ? 'flex' : 'none';
-    if(collapseBtn) collapseBtn.style.display = isFolder ? 'flex' : 'none';
+    // Función auxiliar para manejar la clase 'hidden' y el display (Crucial para vencer al CSS !important)
+    const setVisibility = (id, show, displayStyle = 'block') => {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        if (show) {
+            el.classList.remove('hidden'); // ESTO ES LO QUE FALTABA
+            el.style.display = displayStyle;
+        } else {
+            el.classList.add('hidden');
+            el.style.display = 'none';
+        }
+        return el;
+    };
 
-    // VISIBILIDAD PASTE
+    // 1. Configurar Sección de Carpetas (Solo visible si es folder)
+    setVisibility('ctx-folder-section', isFolder, 'block');
+    
+    // 2. Configurar Sección de Comandos y Pin (Siempre visible para mostrar opción Pin)
+    const cmdSection = setVisibility('ctx-cmd-section', true, 'block');
+    
+    if (cmdSection) {
+        // A. Lógica de Iconos (Ocultar en carpetas, mostrar en comandos)
+        const iconSelector = cmdSection.querySelector('.icon-selector');
+        if (iconSelector) {
+            iconSelector.style.display = isFolder ? 'none' : 'flex';
+        }
+
+        // B. Lógica de Pin/Unpin
+        const pinBtn = document.getElementById('ctx-pin-toggle');
+        if (pinBtn) {
+            pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
+            // Aseguramos que el botón en sí sea visible (por si acaso)
+            pinBtn.style.display = 'flex'; 
+        }
+    }
+    
+    // 3. Configurar Botones de Expandir/Colapsar (Solo carpetas)
+    setVisibility('ctx-expand-all', isFolder, 'flex');
+    setVisibility('ctx-collapse-all', isFolder, 'flex');
+
+    // 4. Configurar Pegar
     const pasteBtn = document.getElementById('ctx-paste');
     if (pasteBtn) {
         if (appClipboard && isFolder) {
@@ -826,13 +857,20 @@ function openContextMenu(e, node) {
         }
     }
 
-    menu.classList.remove('hidden');
-    let x = e.clientX; let y = e.clientY;
-    if (x + 180 > window.innerWidth) x -= 180;
-    if (y + 200 > window.innerHeight) y -= 200;
-    menu.style.top = y + 'px'; menu.style.left = x + 'px';
+    // 5. Posicionamiento y Despliegue del Menú Principal
+    menu.classList.remove('hidden'); // Quitamos hidden al contenedor padre
+    
+    let x = e.clientX; 
+    let y = e.clientY;
+    
+    // Ajuste simple para que no se salga de pantalla
+    const menuRect = { width: 200, height: 300 }; // Estimado
+    if (x + menuRect.width > window.innerWidth) x -= menuRect.width;
+    if (y + menuRect.height > window.innerHeight) y -= menuRect.height;
+    
+    menu.style.top = y + 'px'; 
+    menu.style.left = x + 'px';
 }
-
 function renderColorPalette() {
     const p = document.getElementById('ctx-colors');
     if (!p) return;
@@ -901,10 +939,21 @@ function getAllPinnedItems(nodes) {
 
 function renderFavorites() {
     const list = document.getElementById('qa-list');
-    if(!list) return;
+    if (!list) return;
+
+    // 1. Control de Visibilidad (La corrección del Bug)
+    // Si está colapsado, ocultamos la lista. Si no, la mostramos en bloque.
+    if (qaCollapsed) {
+        list.style.display = 'none';
+    } else {
+        list.style.display = 'block';
+    }
+
+    // 2. Renderizado de Items
     list.innerHTML = '';
     const items = getAllPinnedItems(treeData);
-    if(items.length > 0) {
+
+    if (items.length > 0) {
         document.getElementById('quick-access-container').classList.remove('hidden');
         items.forEach(n => list.appendChild(createNodeElement(n, '', true)));
     } else {
