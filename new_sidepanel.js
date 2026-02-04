@@ -1,4 +1,4 @@
-const FOLDER_COLORS = ['#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#7C4DFF','#CFD8DC','#424242'];
+const FOLDER_COLORS = ['#ECEFF1', '#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#7C4DFF', '#424242'];
 
 const GIST_FILENAME = 'ivan_helper_backup.json';
 
