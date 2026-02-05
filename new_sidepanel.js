@@ -1265,31 +1265,44 @@ function copyToClipboard(text, name = "Command") {
 }
 
 /**
- * 3. ABRIR MODAL (Solo prepara la UI)
+ * 3. ABRIR MODAL (Actualizado con Vista Previa)
  */
 function openSmartModal(text) {
-    globalPendingCommand = text; // Guardar en estado global
+    globalPendingCommand = text; 
     
     const modal = document.getElementById('dynamic-modal');
     const container = document.getElementById('dynamic-form-container');
+    const previewBox = document.getElementById('command-preview'); // <--- NUEVO REFERENCIA
     
-    // Extraer variables únicas
+    // 1. Mostrar el comando original como referencia
+    if (previewBox) {
+        previewBox.textContent = text;
+        // Opcional: Si quieres resaltar las variables, podrías usar innerHTML con un replace, 
+        // pero textContent es más seguro y limpio por ahora.
+    }
+
+    // 2. Extraer variables únicas
     const matches = [...text.matchAll(/{{(.*?)}}/g)];
     const detectedVars = [...new Set(matches.map(m => m[1]))];
 
-    // Limpiar y generar inputs
+    // 3. Limpiar y generar inputs
     container.innerHTML = '';
     detectedVars.forEach(varName => {
         const div = document.createElement('div');
         div.style.marginBottom = "10px";
+        
+        // Etiqueta más limpia
         div.innerHTML = `
-            <label style="display:block; font-size:11px; font-weight:bold; margin-bottom:4px; color:#888;">${varName.toUpperCase()}</label>
-            <input type="text" class="dynamic-input-field" data-varname="${varName}" placeholder="Valor..." style="width:100%; padding:8px; box-sizing:border-box;">
+            <label style="display:block; font-size:11px; font-weight:bold; margin-bottom:4px; color:#666;">${varName.toUpperCase()}</label>
+            <input type="text" class="dynamic-input-field" 
+                   data-varname="${varName}" 
+                   placeholder="Value for ${varName}..." 
+                   style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #ccc; border-radius:4px;">
         `;
         container.appendChild(div);
     });
 
-    // Mostrar
+    // 4. Mostrar
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     

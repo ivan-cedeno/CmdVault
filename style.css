@@ -647,105 +647,125 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     border: none !important;
 }
 
-/* --- MODAL DINÁMICO (LÓGICA CORREGIDA) --- */
+/* ==========================================================================
+   ESTILOS DEL MODAL DINÁMICO (REPARADO, CENTRADO Y CON VISTA PREVIA)
+   ========================================================================== */
 
+/* 1. EL FONDO (Overlay) - Garantiza el centrado absoluto */
 .modal-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(2px);
-    z-index: 10000;
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro */
+    backdrop-filter: blur(3px); /* Efecto borroso elegante */
+    z-index: 99999; /* Siempre encima de todo */
     
-    /* CENTRADO FLEXBOX */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    /* ANIMACIÓN */
-    transition: opacity 0.2s ease-in-out;
-    opacity: 1; /* POR DEFECTO VISIBLE (Si no tiene clase hidden) */
-    pointer-events: auto;
+    /* MAGIA FLEXBOX PARA CENTRAR (Con !important para forzarlo) */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    
+    /* Transiciones */
+    opacity: 1;
+    transition: opacity 0.2s ease;
 }
 
-/* CLASE PARA OCULTAR (Esta es la que usa el JS nuevo) */
+/* Estado oculto */
 .modal-overlay.hidden {
+    display: none !important;
     opacity: 0;
     pointer-events: none;
-    display: none !important; /* Fuerza bruta para que desaparezca */
 }
 
-/* CONTENIDO DEL MODAL */
+/* 2. LA CAJA DEL MODAL */
 .modal-content {
-    background: var(--md-sys-color-surface);
+    background-color: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
-    padding: 24px;
-    border-radius: 12px;
     width: 90%;
-    max-width: 350px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 380px; /* Ancho ideal */
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.5);
     border: 1px solid var(--md-sys-color-outline-variant);
-    display: flex; flex-direction: column; gap: 16px;
+    
+    display: flex; 
+    flex-direction: column; 
+    gap: 16px;
+    position: relative; 
 }
 
-/* HEADER */
-.modal-header h3 { margin: 0 0 4px 0; color: var(--md-sys-color-primary); }
-
-/* INPUTS CONTAINER */
-#dynamic-form-container {
-    max-height: 300px;
+/* 3. VISTA PREVIA DEL COMANDO (Estilo Código) */
+.cmd-preview-box {
+    background-color: #2b2b2b; /* Fondo oscuro tipo terminal */
+    color: #a5d6ff; /* Texto azul claro */
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 11px;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid var(--md-sys-color-primary);
+    
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.4;
+    max-height: 80px;
     overflow-y: auto;
-    display: flex; flex-direction: column; gap: 12px;
-    padding-right: 4px;
 }
 
-/* INPUTS */
+/* 4. INPUTS */
+#dynamic-form-container {
+    display: flex; flex-direction: column; gap: 12px;
+    max-height: 50vh; overflow-y: auto;
+}
+
+.var-group {
+    display: flex; flex-direction: column; gap: 4px;
+}
+
 .modal-input, .dynamic-input-field {
     background: var(--md-sys-color-surface-variant);
     border: 1px solid var(--md-sys-color-outline);
-    border-radius: 6px;
-    padding: 10px;
+    border-radius: 8px;
+    padding: 12px;
     color: var(--md-sys-color-on-surface);
-    font-family: monospace;
+    font-size: 13px;
     width: 100%;
-    box-sizing: border-box; /* Vital para que no se salga */
+    box-sizing: border-box;
 }
 .modal-input:focus, .dynamic-input-field:focus {
     border-color: var(--md-sys-color-primary);
     outline: 2px solid var(--md-sys-color-primary-container);
 }
 
-/* --- BOTONES SIMÉTRICOS --- */
+/* 5. BOTONES SIMÉTRICOS */
 .modal-actions {
     display: flex; 
-    gap: 12px;
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid var(--md-sys-color-outline-variant);
-    width: 100%;
+    gap: 12px; 
+    margin-top: 8px;
+    border-top: none; /* Quitamos bordes extras si los hubiera */
 }
 
-#btn-confirm-dynamic, 
-#btn-cancel-dynamic {
-    flex: 1; /* 50% Ancho cada uno */
-    padding: 10px 0;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
+.btn-primary-modal, .btn-secondary-modal {
+    flex: 1; /* Ambos ocupan 50% exacto */
+    padding: 12px 0;
     border-radius: 8px;
-    display: flex; justify-content: center; align-items: center;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
     border: none;
+    display: flex; justify-content: center; align-items: center;
 }
 
-/* Colores */
-#btn-confirm-dynamic {
+.btn-primary-modal {
     background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
 }
-#btn-cancel-dynamic {
+.btn-primary-modal:hover { filter: brightness(1.1); }
+
+.btn-secondary-modal {
     background-color: transparent;
     color: var(--md-sys-color-on-surface);
     border: 1px solid var(--md-sys-color-outline);
 }
-#btn-cancel-dynamic:hover {
-    background-color: var(--md-sys-color-surface-variant);
-}
+.btn-secondary-modal:hover { background-color: var(--md-sys-color-surface-variant); }

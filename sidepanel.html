@@ -172,18 +172,21 @@
         </div>
     </div>
 
-<div id="dynamic-modal" class="modal-overlay hidden" style="display: none;">
+<div id="dynamic-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 style="margin:0; color:#4285f4;">🚀 Configure Command</h3>
+            <h3 style="margin:0; color:var(--md-sys-color-primary);">🚀 Configure Command</h3>
+            <p style="margin:4px 0 0 0; font-size:12px; opacity:0.7;">Review and fill in variables.</p>
         </div>
+        
+        <div id="command-preview" class="cmd-preview-box">
+            </div>
         
         <div id="dynamic-form-container"></div>
         
-        <div class="modal-actions" style="display:flex; gap:10px; margin-top:15px;">
-            <button id="btn-confirm-dynamic" style="flex:1; background:#4285f4; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer;">Copy</button>
-            
-            <button id="btn-cancel-dynamic" style="flex:1; background:transparent; border:1px solid #ccc; color:#ccc; padding:10px; border-radius:4px; cursor:pointer;">Cancel</button>
+        <div class="modal-actions">
+            <button id="btn-confirm-dynamic" class="btn-primary-modal">Copy Command</button>
+            <button id="btn-cancel-dynamic" class="btn-secondary-modal">Cancel</button>
         </div>
     </div>
 </div>
