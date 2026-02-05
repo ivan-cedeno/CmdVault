@@ -231,6 +231,39 @@ body.theme-fender .folder-header {
     color: #3E2723 !important; /* Dark text on the light background */
 }
 
+/* --- THEME: TURQUOISE (DEEP OCEAN) --- */
+body.theme-turquoise {
+    /* Fondo: Pizarra profunda (Dark Slate / Deep Petrol) */
+    --md-sys-color-background: #0F181A; 
+    --md-sys-color-surface: #162225;
+    
+    /* Contenedores: Teal oscuro */
+    --md-sys-color-surface-container: #1E2D32; 
+    --md-sys-color-surface-container-high: #26383E;
+    
+    /* Primario: Turquesa Vibrante */
+    --md-sys-color-primary: #00E5FF; 
+    --md-sys-color-on-primary: #000000; /* Texto negro sobre turquesa para contraste */
+    
+    /* Secundario: Cian suave */
+    --md-sys-color-secondary-container: #4DD0E1; 
+    
+    /* Textos: Blanco Hielo y Gris Azulado */
+    --md-sys-color-on-surface: #E0F7FA; 
+    --md-sys-color-on-surface-variant: #B2EBF2; 
+    
+    /* Bordes: Teal medio */
+    --md-sys-color-outline: #00838F; 
+    --md-sys-color-error: #FF5252; 
+    
+    /* Terminal: Abismo marino */
+    --cmd-bg: #0A1012;       
+    --accent-green: #18FFFF; /* Cian Eléctrico para el código */
+    
+    /* Selección: Turquesa translúcido */
+    --selection-bg: rgba(0, 229, 255, 0.2);
+}
+
 /* =========================================
    ELEMENTOS DE INTERFAZ
    ========================================= */
@@ -501,4 +534,74 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     width: 100% !important; 
     
     cursor: pointer !important;
+}
+
+/* --- FIX FINAL: EFECTO HOVER EN BOTONES DE CONFIGURACIÓN --- */
+
+/* 1. Preparamos la animación suave */
+#btn-save-username, 
+#btn-save-token, 
+#btn-close-settings,
+#btn-gh-push,
+#btn-gh-pull,
+#btn-gh-fetch {
+    transition: all 0.2s ease !important;
+}
+
+/* 2. Definimos qué pasa al poner el MOUSE ENCIMA (:hover) */
+#btn-save-username:hover, 
+#btn-save-token:hover, 
+#btn-close-settings:hover,
+#btn-gh-push:hover,
+#btn-gh-pull:hover,
+#btn-gh-fetch:hover {
+    /* Se iluminan con el color primario del tema actual (Turquesa, Rojo, Verde, etc.) */
+    background-color: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+    
+    /* Pequeña elevación y sombra para dar sensación de "botón" */
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    
+    cursor: pointer !important;
+}
+
+/* 3. Definimos qué pasa al hacer CLICK (:active) */
+#btn-save-username:active, 
+#btn-save-token:active, 
+#btn-close-settings:active,
+#btn-gh-push:active,
+#btn-gh-pull:active,
+#btn-gh-fetch:active {
+    transform: translateY(0) !important; /* Vuelve a bajar */
+    box-shadow: none !important;
+}
+
+/* --- FIX FINAL: ANIMACIÓN PUSH/FETCH (IDs CORRECTOS) --- */
+
+/* 1. Configuración Base para btn-sync-upload y btn-sync-download */
+#btn-sync-upload,
+#btn-sync-download {
+    transition: all 0.2s ease !important;
+    /* Forzamos que parezcan activos para probar, o deja que JS lo controle */
+}
+
+/* 2. Efecto HOVER (Solo si el botón NO está disabled) */
+#btn-sync-upload:not(:disabled):hover,
+#btn-sync-download:not(:disabled):hover {
+    /* Color Primario del Tema */
+    background-color: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+    
+    /* Efecto visual */
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    cursor: pointer !important;
+}
+
+/* 3. Efecto ACTIVE (Clic) */
+#btn-sync-upload:not(:disabled):active,
+#btn-sync-download:not(:disabled):active {
+    transform: translateY(0) !important;
+    box-shadow: none !important;
 }
