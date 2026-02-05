@@ -287,3 +287,75 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     min-width: 200px;
 }
 .hidden { display: none !important; }
+
+
+
+/* --- CORRECCIÓN DEFINITIVA: ALINEACIÓN DE SETTINGS --- */
+
+/* 1. INPUTS (TextBox: Nombre y Token) */
+#username-input, 
+#gh-token-input {
+    /* Dimensiones */
+    height: 40px !important;
+    box-sizing: border-box !important;
+    
+    /* Comportamiento Flex */
+    flex: 1 1 auto !important;         /* Intenta crecer... */
+    width: auto !important;            
+    
+    /* --- AQUÍ CONTROLAS EL LARGO DEL TEXTBOX --- */
+    max-width: 250px !important;       /* ...pero detente al llegar a 250px */
+    min-width: 100px !important;       /* No seas más pequeño que 100px */
+    /* ------------------------------------------- */
+    
+    /* Estética */
+    margin: 0 !important;
+    padding: 0 10px !important;
+    border: 1px solid var(--md-sys-color-outline) !important;
+    border-radius: 4px !important;
+    background-color: var(--md-sys-color-surface-container-high) !important;
+    color: var(--md-sys-color-on-surface) !important;
+}
+
+/* 2. BOTONES SAVE (Botón lateral) */
+#btn-save-username, 
+#btn-save-token {
+    /* Dimensiones */
+    height: 40px !important;           /* Idéntica altura que el input */
+    box-sizing: border-box !important; 
+    
+    /* Comportamiento Flex */
+    flex: 0 0 auto !important;         /* No te estires ni te encojas */
+    width: auto !important;            
+    
+    /* Tamaño fijo y seguro para el botón */
+    min-width: 167px !important;        
+    
+    /* Estética */
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+}
+
+/* --- AJUSTE FINAL: BOTÓN CLOSE (Cerrar Configuración) --- */
+
+#btn-close-settings {
+    /* Forzamos la misma altura que los demás elementos */
+    height: 40px !important;
+    min-height: 40px !important;
+    
+    /* Aseguramos que el borde se cuente dentro del tamaño */
+    box-sizing: border-box !important;
+    
+    /* Centrado del texto */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    
+    /* Opcional: Si quieres que ocupe todo el ancho disponible */
+    width: 100% !important; 
+    
+    cursor: pointer !important;
+}
