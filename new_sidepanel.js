@@ -806,12 +806,12 @@ function openContextMenu(e, node) {
     const menu = document.getElementById('context-menu');
     const isFolder = node.type === 'folder';
     
-    // Función auxiliar para manejar la clase 'hidden' y el display (Crucial para vencer al CSS !important)
+    // Helper para manejar visibilidad
     const setVisibility = (id, show, displayStyle = 'block') => {
         const el = document.getElementById(id);
         if (!el) return null;
         if (show) {
-            el.classList.remove('hidden'); // ESTO ES LO QUE FALTABA
+            el.classList.remove('hidden');
             el.style.display = displayStyle;
         } else {
             el.classList.add('hidden');
@@ -820,33 +820,28 @@ function openContextMenu(e, node) {
         return el;
     };
 
-    // 1. Configurar Sección de Carpetas (Solo visible si es folder)
+    // --- 1. CONFIGURACIÓN DE CONTENIDO (Lógica V2) ---
+    
     setVisibility('ctx-folder-section', isFolder, 'block');
     
-    // 2. Configurar Sección de Comandos y Pin (Siempre visible para mostrar opción Pin)
     const cmdSection = setVisibility('ctx-cmd-section', true, 'block');
-    
     if (cmdSection) {
-        // A. Lógica de Iconos (Ocultar en carpetas, mostrar en comandos)
         const iconSelector = cmdSection.querySelector('.icon-selector');
         if (iconSelector) {
+            // Mantenemos 'grid' para respetar las 3 columnas
             iconSelector.style.display = isFolder ? 'none' : 'grid';
         }
 
-        // B. Lógica de Pin/Unpin
         const pinBtn = document.getElementById('ctx-pin-toggle');
         if (pinBtn) {
             pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
-            // Aseguramos que el botón en sí sea visible (por si acaso)
             pinBtn.style.display = 'flex'; 
         }
     }
     
-    // 3. Configurar Botones de Expandir/Colapsar (Solo carpetas)
     setVisibility('ctx-expand-all', isFolder, 'flex');
     setVisibility('ctx-collapse-all', isFolder, 'flex');
 
-    // 4. Configurar Pegar
     const pasteBtn = document.getElementById('ctx-paste');
     if (pasteBtn) {
         if (appClipboard && isFolder) {
@@ -857,19 +852,44 @@ function openContextMenu(e, node) {
         }
     }
 
-    // 5. Posicionamiento y Despliegue del Menú Principal
-    menu.classList.remove('hidden'); // Quitamos hidden al contenedor padre
+    // --- 2. POSICIONAMIENTO INTELIGENTE (Migrado de V1) ---
     
-    let x = e.clientX; 
+    // Paso A: Hacer visible pero transparente para medir dimensiones REALES
+    // (Esto es clave: el navegador necesita renderizarlo para saber cuánto mide)
+    menu.style.visibility = 'hidden'; 
+    menu.classList.remove('hidden');
+    menu.style.display = 'block'; 
+
+    // Paso B: Obtener dimensiones exactas
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+    
+    // Coordenadas iniciales del mouse
+    let x = e.clientX;
     let y = e.clientY;
     
-    // Ajuste simple para que no se salga de pantalla
-    const menuRect = { width: 200, height: 300 }; // Estimado
-    if (x + menuRect.width > window.innerWidth) x -= menuRect.width;
-    if (y + menuRect.height > window.innerHeight) y -= menuRect.height;
+    // Paso C: Detección de Colisiones
     
-    menu.style.top = y + 'px'; 
-    menu.style.left = x + 'px';
+    // 1. Ajuste Horizontal (Si se sale a la derecha -> mostrar a la izquierda)
+    if (x + menuWidth > winWidth) {
+        x = x - menuWidth; 
+    }
+    
+    // 2. Ajuste Vertical (Si se sale por abajo -> mostrar hacia arriba)
+    if (y + menuHeight > winHeight) {
+        y = y - menuHeight; 
+    }
+    
+    // 3. Márgenes de seguridad (Evita que se pegue al borde superior/izquierdo)
+    if (y < 10) y = 10;
+    if (x < 10) x = 10;
+    
+    // Paso D: Aplicar coordenadas y revelar
+    menu.style.top = `${y}px`;
+    menu.style.left = `${x}px`;
+    menu.style.visibility = 'visible'; // ¡Magia! Aparece en el lugar correcto
 }
 function renderColorPalette() {
     const p = document.getElementById('ctx-colors');
