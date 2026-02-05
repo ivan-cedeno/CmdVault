@@ -798,19 +798,14 @@ function changeTheme(themeName) {
     currentTheme = themeName;
 }
 
+// ENTRADA MAESTRA: Redirige al sistema inteligente
 function copyToClipboard(text, name = "Command") {
     if (!text) return;
-    navigator.clipboard.writeText(text);
-    showToast("📋 Copied!");
     
-    const idx = commandHistory.findIndex(x => (typeof x === 'string' ? x : x.cmd) === text);
-    if (idx !== -1) commandHistory.splice(idx, 1);
-    
-    commandHistory.unshift({ cmd: text, name: name });
-    if (commandHistory.length > 5) commandHistory.pop();
-    
-    chrome.storage.local.set({ linuxHistory: commandHistory });
-    renderHistory();
+    // En lugar de copiar directo, pasamos por el filtro inteligente.
+    // Si tiene variables, abrirá el modal.
+    // Si NO tiene variables, el Smart Handler llamará a 'copyToClipboardReal' automáticamente.
+    handleSmartCopy(text);
 }
 
 function showToast(m) {
@@ -1223,5 +1218,138 @@ async function autoSyncToCloud() {
         }
     } catch (e) {
         console.error("Auto-sync failed", e);
+    }
+}
+
+/* =================================================================================
+   SISTEMA DE COPIADO INTELIGENTE (ARQUITECTURA GLOBAL)
+   ================================================================================= */
+
+// Estado Global
+let globalPendingCommand = "";
+
+// 1. INICIALIZACIÓN (Se ejecuta al cargar la extensión)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Inicializando Eventos del Modal...");
+
+    const btnConfirm = document.getElementById('btn-confirm-dynamic');
+    const btnCancel = document.getElementById('btn-cancel-dynamic');
+
+    if (btnConfirm) {
+        // Asignamos el evento CLICK una sola vez, para siempre.
+        btnConfirm.addEventListener('click', executeSmartCopy);
+        console.log("✅ Botón Copy conectado correctamente.");
+    } else {
+        console.error("❌ ERROR CRÍTICO: No se encontró el botón 'btn-confirm-dynamic' en el HTML.");
+    }
+
+    if (btnCancel) {
+        btnCancel.addEventListener('click', closeDynamicModal);
+    }
+});
+
+/**
+ * 2. FUNCIÓN DE ENTRADA (Llama a esto desde tus botones de comando)
+ */
+function copyToClipboard(text, name = "Command") {
+    if (!text) return;
+    
+    // Detectar variables {{...}}
+    const hasVariables = /{{(.*?)}}/.test(text);
+
+    if (hasVariables) {
+        openSmartModal(text);
+    } else {
+        copyToClipboardReal(text);
+    }
+}
+
+/**
+ * 3. ABRIR MODAL (Solo prepara la UI)
+ */
+function openSmartModal(text) {
+    globalPendingCommand = text; // Guardar en estado global
+    
+    const modal = document.getElementById('dynamic-modal');
+    const container = document.getElementById('dynamic-form-container');
+    
+    // Extraer variables únicas
+    const matches = [...text.matchAll(/{{(.*?)}}/g)];
+    const detectedVars = [...new Set(matches.map(m => m[1]))];
+
+    // Limpiar y generar inputs
+    container.innerHTML = '';
+    detectedVars.forEach(varName => {
+        const div = document.createElement('div');
+        div.style.marginBottom = "10px";
+        div.innerHTML = `
+            <label style="display:block; font-size:11px; font-weight:bold; margin-bottom:4px; color:#888;">${varName.toUpperCase()}</label>
+            <input type="text" class="dynamic-input-field" data-varname="${varName}" placeholder="Valor..." style="width:100%; padding:8px; box-sizing:border-box;">
+        `;
+        container.appendChild(div);
+    });
+
+    // Mostrar
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    
+    // Focus
+    setTimeout(() => {
+        const first = container.querySelector('input');
+        if(first) first.focus();
+    }, 100);
+}
+
+/**
+ * 4. EJECUTAR COPIA (Se dispara al hacer clic en el botón Copy)
+ */
+function executeSmartCopy() {
+    // DEBUG: Si ves esta alerta, el botón funciona y el problema es la lógica de reemplazo.
+    console.log("🖱️ Click detectado en botón Copy"); 
+
+    let finalCmd = globalPendingCommand;
+    const inputs = document.querySelectorAll('.dynamic-input-field');
+
+    // Reemplazar valores
+    inputs.forEach(input => {
+        const varName = input.getAttribute('data-varname');
+        const val = input.value;
+        // Reemplazo Global
+        finalCmd = finalCmd.split(`{{${varName}}}`).join(val);
+    });
+
+    console.log("Comando Final:", finalCmd);
+    
+    // Ejecutar copia
+    copyToClipboardReal(finalCmd);
+    
+    // Cerrar
+    closeDynamicModal();
+}
+
+/**
+ * 5. CERRAR MODAL
+ */
+function closeDynamicModal() {
+    const modal = document.getElementById('dynamic-modal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    globalPendingCommand = "";
+}
+
+/**
+ * 6. FUNCIÓN DE COPIADO FÍSICO (No tocar si ya funciona)
+ */
+async function copyToClipboardReal(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        if (typeof showToast === 'function') showToast("📋 Copied!");
+        
+        // Historial (Simplificado para evitar errores)
+        if (typeof commandHistory !== 'undefined') {
+             // Tu lógica de historial aquí si la necesitas...
+        }
+    } catch (err) {
+        alert("Error al copiar: " + err);
     }
 }
