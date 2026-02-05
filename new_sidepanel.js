@@ -831,13 +831,13 @@ function injectContextMenu() {
     // Verificar si ya existe expand-all para no duplicar
     if (document.getElementById('ctx-expand-all')) return;
 
-    // HTML de los botones nuevos + clipboard si falta
-    const newItems = `
-        <hr>
-        <div class="ctx-item" id="ctx-expand-all" style="display:none">🔽 Expand All</div>
-        <div class="ctx-item" id="ctx-collapse-all" style="display:none">▶️ Collapse All</div>
-        <hr>
-    `;
+// HTML de los botones nuevos
+const newItems = `
+    <div class="ctx-item" id="ctx-expand-all" style="display:none">🔽 Expand All</div>
+    <div class="ctx-item" id="ctx-collapse-all" style="display:none">▶️ Collapse All</div>
+    
+    <hr class="ctx-hr" id="ctx-hr-collapse" style="display:none">
+`;
     
     // Insertar ANTES de las opciones de portapapeles si existen, o antes de Editar
     const ref = document.getElementById('ctx-copy') || document.getElementById('ctx-edit');
@@ -869,7 +869,7 @@ function openContextMenu(e, node) {
     
     // A. Sección de CARPETAS: Visible solo si es carpeta
     setVisibility('ctx-folder-section', isFolder, 'block');
-    
+    setVisibility('ctx-hr-collapse', isFolder, 'block');
     // B. Sección de COMANDOS: Visible solo si NO es carpeta (¡Aquí estaba el bug!)
     // Esto oculta automáticamente Iconos, Pin, Etiquetas y todo lo que esté dentro de 'ctx-cmd-section'
     const cmdSection = setVisibility('ctx-cmd-section', !isFolder, 'block');

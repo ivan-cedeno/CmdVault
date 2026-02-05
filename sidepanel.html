@@ -59,45 +59,47 @@
     <div id="status-msg" class="status-msg hidden"></div>
 
     <!-- CONTEXT MENU ACTUALIZADO -->
-  <div id="context-menu" class="context-menu hidden">
+<div id="context-menu" class="context-menu hidden">
     
     <div id="ctx-folder-section">
         <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin: 8px 0 4px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Folder Color</div>
         <div id="ctx-colors" class="color-palette"></div>
-        <hr>
+        
+        <hr class="ctx-hr"> 
+        
         <div class="ctx-item" id="ctx-add-folder">📁 New Sub-Folder</div>
         <div class="ctx-item" id="ctx-add-cmd">💻 Add Command</div>
-        <hr id="ctx-sep-1">
     </div>
 
-  <div id="ctx-cmd-section" class="hidden">
-    
-    <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin: 8px 0 4px 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-        Icon Type
-    </div>
-    
-    <div class="icon-selector">                
-        <span class="icon-option" data-icon="⌨️">⌨️ cmd</span>
-        <span class="icon-option" data-icon="⚡">⚡script</span>
-        <span class="icon-option" data-icon="🧾">🧾txt</span>
-        <span class="icon-option" data-icon="🔑">🔑pwd</span>
-        <span class="icon-option" data-icon="🔴">🔴</span>                             
-        <span class="icon-option" data-icon="🟢">🟢</span>                             
-        <span class="icon-option" data-icon="🔵">🔵</span>
-        <span class="icon-option" data-icon="🟡">🟡</span>
-        <span class="icon-option" data-icon="⚫">⚫</span> 
-                                               
-    </div>
-   
+    <div id="ctx-cmd-section" class="hidden">
+        <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin: 8px 0 4px 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Icon Type
+        </div>
+        
+        <div class="icon-selector">                
+            <span class="icon-option" data-icon="⌨️">⌨️ cmd</span>
+            <span class="icon-option" data-icon="⚡">⚡script</span>
+            <span class="icon-option" data-icon="🧾">🧾txt</span>
+            <span class="icon-option" data-icon="🔑">🔑pwd</span>
+            <span class="icon-option" data-icon="🔴">🔴</span>                             
+            <span class="icon-option" data-icon="🟢">🟢</span>                             
+            <span class="icon-option" data-icon="🔵">🔵</span>
+            <span class="icon-option" data-icon="🟡">🟡</span>
+            <span class="icon-option" data-icon="⚫">⚫</span>                                         
+        </div>
+        
+        <hr class="ctx-hr"> 
 
-    <div class="ctx-item" id="ctx-pin-toggle">📌 Pin / Unpin</div>
+        <div class="ctx-item" id="ctx-pin-toggle">📌 Pin / Unpin</div>
+    </div>
+
+    <hr class="ctx-hr">
     
     <div class="ctx-item" id="ctx-copy">📋 Copy</div>
     <div class="ctx-item" id="ctx-cut">✂️ Cut</div>
-    <hr>
     <div class="ctx-item" id="ctx-paste" style="display:none">📋 Paste</div>
     
-    </div>
+    <hr class="ctx-hr">
     
     <div class="ctx-item" id="ctx-edit">✏️ Edit</div>
     <div class="ctx-item danger" id="ctx-delete">🗑️ Delete</div>

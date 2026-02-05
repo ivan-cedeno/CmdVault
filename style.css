@@ -606,22 +606,43 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     box-shadow: none !important;
 }
 
-/* --- FIX FINAL AJUSTADO: SOLO PRIMER Y ÚLTIMO SEPARADOR --- */
+/* --- FIX DEFINITIVO (LISTA BLANCA) --- */
 
-/* 1. Por defecto, ocultamos TODOS los separadores dentro de esa sección */
-#ctx-cmd-section hr {
+/* 1. REGLA SUPREMA: Ocultar TODOS los <hr> dentro del menú por defecto */
+#context-menu hr {
     display: none !important;
+    border: none !important;
+    margin: 0 !important;
+    height: 0 !important;
 }
 
-/* 2. Rescatamos el PRIMERO (El que está debajo de los iconos) */
-#ctx-cmd-section hr:first-of-type {
+/* 2. EXCEPCIÓN: Mostrar SOLO los que tienen la clase "ctx-hr" */
+#context-menu hr.ctx-hr {
     display: block !important;
+    height: 1px !important;
     margin: 5px 0 !important;
+    border: 0 !important;
+    
+    /* CAMBIO: Color más intenso y sin transparencia */
+    border-top: 1px solid #888 !important; /* Gris sólido y visible */
+    opacity: 1 !important; /* 100% visible (antes 0.5) */
 }
 
-/* 3. Rescatamos el ÚLTIMO (El que está debajo de Cut/Paste) */
-/* Esto restaurará la línea divisoria antes de "Edit" */
-#ctx-cmd-section hr:last-of-type {
-    display: block !important;
-    margin: 5px 0 !important;
+/* 3. Limpieza de contenedores para evitar bordes fantasma */
+#ctx-folder-section, 
+#ctx-cmd-section {
+    border: none !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* --- FIX FINAL SUPREMO: RESPETAR LA CLASE HIDDEN --- */
+
+/* 1. Soluciona el conflicto: Si el JS agrega la clase 'hidden', 
+      esta regla fuerza a ocultar la línea, ganándole al 'display: block !important' anterior. */
+#context-menu hr.ctx-hr.hidden {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    border: none !important;
 }
