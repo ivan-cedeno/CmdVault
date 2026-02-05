@@ -846,6 +846,7 @@ function injectContextMenu() {
     }
 }
 
+/* --- FUNCIÓN CONTEXT MENU CORREGIDA (FIX ICONOS/PIN) --- */
 function openContextMenu(e, node) {
     const menu = document.getElementById('context-menu');
     const isFolder = node.type === 'folder';
@@ -864,28 +865,32 @@ function openContextMenu(e, node) {
         return el;
     };
 
-    // --- 1. CONFIGURACIÓN DE CONTENIDO (Lógica V2) ---
+    // --- 1. CONFIGURACIÓN DE CONTENIDO ---
     
+    // A. Sección de CARPETAS: Visible solo si es carpeta
     setVisibility('ctx-folder-section', isFolder, 'block');
     
-    const cmdSection = setVisibility('ctx-cmd-section', true, 'block');
-    if (cmdSection) {
-        const iconSelector = cmdSection.querySelector('.icon-selector');
-        if (iconSelector) {
-            // Mantenemos 'grid' para respetar las 3 columnas
-            iconSelector.style.display = isFolder ? 'none' : 'grid';
-        }
+    // B. Sección de COMANDOS: Visible solo si NO es carpeta (¡Aquí estaba el bug!)
+    // Esto oculta automáticamente Iconos, Pin, Etiquetas y todo lo que esté dentro de 'ctx-cmd-section'
+    const cmdSection = setVisibility('ctx-cmd-section', !isFolder, 'block');
 
+    // C. Configuración específica de Comandos (Solo si es visible)
+    if (!isFolder && cmdSection) {
+        // Configurar texto del PIN
         const pinBtn = document.getElementById('ctx-pin-toggle');
         if (pinBtn) {
             pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
             pinBtn.style.display = 'flex'; 
         }
+        // Nota: Ya no necesitamos ocultar manualmente .icon-selector porque 
+        // el contenedor padre (ctx-cmd-section) ya está oculto.
     }
     
+    // D. Opciones de Expandir/Colapsar (Solo carpetas)
     setVisibility('ctx-expand-all', isFolder, 'flex');
     setVisibility('ctx-collapse-all', isFolder, 'flex');
 
+    // E. Botón Paste (Solo si hay algo en portapapeles y es carpeta)
     const pasteBtn = document.getElementById('ctx-paste');
     if (pasteBtn) {
         if (appClipboard && isFolder) {
@@ -896,10 +901,9 @@ function openContextMenu(e, node) {
         }
     }
 
-    // --- 2. POSICIONAMIENTO INTELIGENTE (Migrado de V1) ---
+    // --- 2. POSICIONAMIENTO INTELIGENTE ---
     
-    // Paso A: Hacer visible pero transparente para medir dimensiones REALES
-    // (Esto es clave: el navegador necesita renderizarlo para saber cuánto mide)
+    // Paso A: Hacer visible pero transparente para medir dimensiones
     menu.style.visibility = 'hidden'; 
     menu.classList.remove('hidden');
     menu.style.display = 'block'; 
@@ -915,25 +919,24 @@ function openContextMenu(e, node) {
     let y = e.clientY;
     
     // Paso C: Detección de Colisiones
-    
-    // 1. Ajuste Horizontal (Si se sale a la derecha -> mostrar a la izquierda)
+    // 1. Ajuste Horizontal
     if (x + menuWidth > winWidth) {
         x = x - menuWidth; 
     }
     
-    // 2. Ajuste Vertical (Si se sale por abajo -> mostrar hacia arriba)
+    // 2. Ajuste Vertical
     if (y + menuHeight > winHeight) {
         y = y - menuHeight; 
     }
     
-    // 3. Márgenes de seguridad (Evita que se pegue al borde superior/izquierdo)
+    // 3. Márgenes de seguridad
     if (y < 10) y = 10;
     if (x < 10) x = 10;
     
     // Paso D: Aplicar coordenadas y revelar
     menu.style.top = `${y}px`;
     menu.style.left = `${x}px`;
-    menu.style.visibility = 'visible'; // ¡Magia! Aparece en el lugar correcto
+    menu.style.visibility = 'visible'; 
 }
 function renderColorPalette() {
     const p = document.getElementById('ctx-colors');
