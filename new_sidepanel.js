@@ -639,23 +639,67 @@ function execAdd(parentId, type) {
                 cmd: c, 
                 tags: tagsArray,      // Guardamos el array de tags para que se activen los badges
                 type: 'command', 
-                icon: '⚡', 
+                icon: '⌨️', 
                 expanded: false 
             });
         }
     }
 }
 
+/* --- FUNCIÓN DE EDICIÓN MEJORADA (V2 FIX) --- */
 function execEdit(id) {
     const node = findNode(treeData, id);
-    if (node) {
-        const n = prompt("Rename:", node.name);
-        if (n) {
+    if (!node) return;
+
+    // CASO 1: Si es una CARPETA, solo editamos el nombre
+    if (node.type === 'folder') {
+        const n = prompt("Edit Folder Name:", node.name);
+        // Si el usuario da "Cancelar" (null) o lo deja vacío, no hacemos nada
+        if (n !== null && n.trim() !== "") { 
             node.name = n;
             saveData();
             refreshAll();
         }
+        return;
     }
+
+    // CASO 2: Si es un COMANDO, editamos los 4 campos (Flujo de 4 pasos)
+    
+    // 1. Nombre (Obligatorio)
+    const n = prompt("Edit Name:", node.name);
+    if (n === null) return; // Si cancela, abortamos la edición
+
+    // 2. Descripción
+    const d = prompt("Edit Description:", node.description || "");
+    if (d === null) return;
+
+    // 3. Comando
+    const c = prompt("Edit Command:", node.cmd || "");
+    if (c === null) return;
+
+    // 4. Tags (Convertimos el array a texto para mostrarlo)
+    const currentTags = (node.tags || []).join(', ');
+    const t = prompt("Edit Tags (comma separated):", currentTags);
+    if (t === null) return;
+
+    // --- APLICAR CAMBIOS ---
+    
+    // Validamos que el nombre no quede vacío
+    if (n.trim()) node.name = n;
+    
+    node.description = d;
+    node.cmd = c;
+
+    // Procesar Tags (String -> Array)
+    let tagsArray = [];
+    if (t) {
+        tagsArray = t.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
+    }
+    node.tags = tagsArray;
+
+    // Guardar y Refrescar
+    saveData();
+    refreshAll();
 }
 
 // --- NEW RECURSIVE ACTIONS ---
