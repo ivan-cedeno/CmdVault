@@ -605,3 +605,23 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     transform: translateY(0) !important;
     box-shadow: none !important;
 }
+
+/* --- FIX FINAL AJUSTADO: SOLO PRIMER Y ÚLTIMO SEPARADOR --- */
+
+/* 1. Por defecto, ocultamos TODOS los separadores dentro de esa sección */
+#ctx-cmd-section hr {
+    display: none !important;
+}
+
+/* 2. Rescatamos el PRIMERO (El que está debajo de los iconos) */
+#ctx-cmd-section hr:first-of-type {
+    display: block !important;
+    margin: 5px 0 !important;
+}
+
+/* 3. Rescatamos el ÚLTIMO (El que está debajo de Cut/Paste) */
+/* Esto restaurará la línea divisoria antes de "Edit" */
+#ctx-cmd-section hr:last-of-type {
+    display: block !important;
+    margin: 5px 0 !important;
+}
