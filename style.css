@@ -88,6 +88,72 @@ body.theme-teradata {
     --accent-green: #22c55e; --selection-bg: rgba(243, 116, 35, 0.15);
 }
 
+/* --- THEME: GOD OF WAR (SPARTAN) --- */
+body.theme-spartan {
+    /* Fondo: Tonos piedra oscura y ceniza volcánica */
+    --md-sys-color-background: #120F0E; 
+    --md-sys-color-surface: #1C1917;
+    
+    /* Contenedores: Marrón oscuro desaturado (Cuero viejo) */
+    --md-sys-color-surface-container: #26211F; 
+    --md-sys-color-surface-container-high: #332B29;
+    
+    /* Primario: Rojo Espartano (La marca de Kratos) */
+    --md-sys-color-primary: #E53935; 
+    --md-sys-color-on-primary: #FFFFFF;
+    
+    /* Secundario: Bronce nórdico / Cuero */
+    --md-sys-color-secondary-container: #4E342E; 
+    
+    /* Textos: Blanco Ceniza (Piel de Kratos) y Gris Bronce */
+    --md-sys-color-on-surface: #EFEBE9; 
+    --md-sys-color-on-surface-variant: #BCAAA4; 
+    
+    /* Bordes y Detalles */
+    --md-sys-color-outline: #5D4037; 
+    --md-sys-color-error: #C62828; 
+    
+    /* Código y Acentos */
+    --cmd-bg: #0A0908;       /* Negro profundo */
+    --accent-green: #8BC34A; /* Verde "Orbe de Salud" */
+    
+    /* Selección */
+    --selection-bg: rgba(229, 57, 53, 0.25); /* Resplandor rojo */
+}
+
+/* --- THEME: NINTENDO 64 (64-BIT ERA) --- */
+body.theme-n64 {
+    /* Fondo: Gris Carbón Profundo (Carcasa de la consola) */
+    --md-sys-color-background: #18181A; 
+    --md-sys-color-surface: #222224;
+    
+    /* Contenedores: Gris Plástico Mate (Cartucho / Expansion Pak) */
+    --md-sys-color-surface-container: #2D2D30; 
+    --md-sys-color-surface-container-high: #3A3A3E;
+    
+    /* Primario: Azul Vibrante (Botón A - Acción principal) */
+    --md-sys-color-primary: #0050B5; 
+    --md-sys-color-on-primary: #FFFFFF;
+    
+    /* Secundario: Verde (Botón B - Acentos secundarios) */
+    --md-sys-color-secondary-container: #009640; 
+    
+    /* Textos: Gris Claro (Lectura cómoda sobre fondo oscuro) */
+    --md-sys-color-on-surface: #E0E0E0; 
+    --md-sys-color-on-surface-variant: #9E9E9E; 
+    
+    /* Bordes: Gris Medio (Ranuras de ventilación) */
+    --md-sys-color-outline: #555555; 
+    --md-sys-color-error: #D32F2F; /* Rojo (Botón Start) */
+    
+    /* Terminal: Negro profundo con texto Amarillo (Botones C) */
+    --cmd-bg: #0A0A0A;       
+    --accent-green: #FFC600; /* El amarillo de los botones C resalta genial */
+    
+    /* Selección: Azul translúcido */
+    --selection-bg: rgba(0, 80, 181, 0.3);
+}
+
 /* =========================================
    ELEMENTOS DE INTERFAZ
    ========================================= */
