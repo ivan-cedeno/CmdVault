@@ -769,3 +769,23 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     border: 1px solid var(--md-sys-color-outline);
 }
 .btn-secondary-modal:hover { background-color: var(--md-sys-color-surface-variant); }
+
+/* --- WATERMARK DE AUTOR --- */
+.app-watermark {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    
+    /* Color sutil (adaptable a tema claro/oscuro si usas variables) */
+    color: var(--md-sys-color-outline, #888); 
+    
+    opacity: 0.6; /* Transparencia para que no distraiga */
+    margin-top: 30px; /* Separación del resto de controles */
+    margin-bottom: 10px;
+    letter-spacing: 0.5px; /* Un poco de aire entre letras */
+    font-family: 'Roboto', sans-serif; /* O la fuente que uses en tu app */
+    
+    /* Opcional: Evitar que el usuario lo seleccione por accidente */
+    user-select: none;
+    cursor: default;
+}
