@@ -272,7 +272,7 @@ body {
     font-family: var(--font-ui); transition: background-color 0.3s ease, color 0.3s ease;
 }
 .header-row { display: flex; justify-content: space-between; align-items: center; }
-.app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.2rem; }
+.app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.1rem; }
 .action-buttons { display: flex; gap: 4px; align-items: center; }
 .separator { width: 1px; height: 18px; background-color: var(--md-sys-color-outline); margin: 0 4px; opacity: 0.3; }
 .icon-btn {
@@ -941,4 +941,48 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     border-color: var(--md-sys-color-primary);
     box-shadow: 0 0 10px var(--md-sys-color-primary, rgba(66, 135, 245, 0.4));
     transform: translateY(-1px);
+}
+
+/* --- ICONOS DE CARPETA V3 --- */
+.folder-icon-v3 {
+    width: 18px;
+    height: 18px;
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 1.5px !important;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    margin-right: 10px;
+    vertical-align: middle;
+    opacity: 0.8;
+    transition: transform 0.2s ease;
+}
+
+/* Efecto al pasar el mouse sobre la fila de la carpeta */
+.folder-item:hover .folder-icon-v3 {
+    transform: scale(1.1);
+    opacity: 1;
+    color: var(--md-sys-color-primary);
+}
+
+/* --- ICONOS DE CARPETA V3 --- */
+.folder-icon-v3 {
+    width: 18px;
+    height: 18px;
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 1.5px !important;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    margin-right: 10px;
+    vertical-align: middle;
+    opacity: 0.8;
+    transition: transform 0.2s ease;
+}
+
+/* Efecto al pasar el mouse sobre la fila de la carpeta */
+.folder-item:hover .folder-icon-v3 {
+    transform: scale(1.1);
+    opacity: 1;
+    color: var(--md-sys-color-primary);
 }

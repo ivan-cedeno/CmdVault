@@ -167,11 +167,27 @@ function createNodeElement(node, filter, isFav = false) {
     if (node.color && node.type === 'folder') header.style.color = node.color;
     if (node.description) header.title = node.description;
 
+    // --- CIRUGÍA DE ICONOS V3 ---
     const iconSpan = document.createElement('span');
     iconSpan.style.marginRight = '8px';
+    iconSpan.style.display = 'flex'; // Centrado de SVG
+    iconSpan.style.alignItems = 'center';
+    
     const collapsed = node.collapsed === true;
-    const icon = node.type === 'folder' ? (collapsed && !filter ? '📁' : '📂') : (node.icon || '⚡');
-    iconSpan.textContent = icon;
+
+    // Definición de moldes minimalistas (Stroke 1.5px)
+    const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+    const iconOpen   = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
+    const iconCmd    = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
+
+    // Lógica de inyección quirúrgica
+    if (node.type === 'folder') {
+        iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
+    } else {
+        // Usa el icono del comando si existe, si no, usa el terminal minimalista
+        iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
+    }
+    // --- FIN CIRUGÍA DE ICONOS ---
     
     const nameSpan = document.createElement('span');
     nameSpan.textContent = node.name || "Untitled";
@@ -217,7 +233,12 @@ function createNodeElement(node, filter, isFav = false) {
         
         const btn = document.createElement('div');
         btn.className = 'cmd-ctrl-btn';
-        btn.textContent = node.expanded ? '▲' : '▼';
+        
+        // OPCIONAL: Cambiamos también las flechas ▲/▼ por chevrons finos
+        btn.innerHTML = node.expanded 
+            ? `<svg class="folder-icon-v3" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"></polyline></svg>` 
+            : `<svg class="folder-icon-v3" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+            
         btn.onclick = (e) => {
             e.stopPropagation();
             node.expanded = !node.expanded;
@@ -237,7 +258,7 @@ function createNodeElement(node, filter, isFav = false) {
         if (!node.collapsed || filter) {
             const inner = document.createElement('div');
             inner.className = 'folder-content';
-            inner.style.borderLeft = "1px solid var(--md-sys-color-outline)";
+            inner.style.borderLeft = "1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1))";
             inner.style.marginLeft = "12px";
             inner.style.paddingLeft = "8px";
 
