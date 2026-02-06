@@ -272,7 +272,7 @@ body {
     font-family: var(--font-ui); transition: background-color 0.3s ease, color 0.3s ease;
 }
 .header-row { display: flex; justify-content: space-between; align-items: center; }
-.app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.1rem; }
+.app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.2rem; }
 .action-buttons { display: flex; gap: 4px; align-items: center; }
 .separator { width: 1px; height: 18px; background-color: var(--md-sys-color-outline); margin: 0 4px; opacity: 0.3; }
 .icon-btn {
