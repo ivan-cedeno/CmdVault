@@ -879,6 +879,33 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     box-shadow: 0 0 10px var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.1));
 }
 
+/* --- AJUSTE DE TEMA CLARO PARA SEARCH BOX EN CMDVAULT --- */
+
+/* Aplicamos los cambios solo cuando la clase .theme-light está activa */
+.theme-light .search-wrapper {
+    /* Fondo claro translúcido (estilo frosted glass) */
+    background: rgba(255, 255, 255, 0.7) !important;
+    
+    /* Borde sutil para que no se pierda en el fondo claro */
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light #search-input {
+    /* Texto oscuro para máxima legibilidad */
+    color: #1e293b !important; 
+}
+
+.theme-light .search-icon-v3 {
+    /* Mantenemos el color primario del tema para el icono */
+    color: var(--md-sys-color-primary) !important;
+    opacity: 0.8 !important;
+}
+
+.theme-light #search-input::placeholder {
+    /* Placeholder en un tono grisáceo suave */
+    color: rgba(30, 41, 59, 0.5) !important;
+}
+
 /* Icono de Lupa - Parámetro de espacio ajustado */
 .search-icon-v3 {
     width: 14px; /* Un poco más pequeña para elegancia */
