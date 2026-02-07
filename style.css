@@ -320,9 +320,36 @@ input[type="text"]#search-input:focus {
 .tree-item:hover { background-color: var(--md-sys-color-surface-container-high); }
 .item-header { display: flex; align-items: center; font-size: 0.85rem; padding: 4px; color: var(--md-sys-color-on-surface); }
 .tag-badge {
-    font-size: 0.65rem; padding: 2px 8px; border-radius: 12px;
-    background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-primary);
-    margin-left: auto;
+    /* Tipografía técnica y legible */
+    font-size: 10px; 
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    
+    /* Forma de Píldora V3 */
+    padding: 2px 10px; 
+    border-radius: 20px; /* Más redondeado para el look moderno */
+    margin-left: 6px; /* Espacio entre badges si hay varios */
+    
+    /* Efecto de profundidad sutil (Glassmorphism) */
+    background-color: var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.1)); 
+    color: var(--md-sys-color-primary, #4287f5);
+    border: 1px solid rgba(66, 135, 245, 0.2);
+    
+    /* Animación fluida */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    cursor: default;
+}
+
+/* Interacción: Los tags resaltan cuando interactúas con el comando */
+.tree-item:hover .tag-badge {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary, #ffffff);
+    border-color: transparent;
+    transform: translateY(-1px); /* Sutil levantamiento */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* DRAG & DROP & CUT STATE */
@@ -1110,4 +1137,19 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .light-mode .cmd-ctrl-btn {
     background: rgba(0, 0, 0, 0.04);
     color: rgba(0, 0, 0, 0.6);
+}
+
+/* BADGE ESPECIAL: PRECAUTION */
+.tag-badge.precaution {
+    /* Fondo ámbar translúcido y texto dorado */
+    background-color: rgba(251, 191, 36, 0.1) !important; 
+    color: #fbbf24 !important; 
+    border-color: rgba(251, 191, 36, 0.3) !important;
+}
+
+/* Efecto Hover para Precaution */
+.tree-item:hover .tag-badge.precaution {
+    background-color: #fbbf24 !important;
+    color: #1e293b !important; /* Texto oscuro para contraste */
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
 }
