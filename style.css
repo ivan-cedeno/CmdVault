@@ -1332,26 +1332,43 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     overflow: hidden !important; 
 }
 
+/* --- FIX DE VISIBILIDAD DE FLASH V3 --- */
+
 .copy-flash::after {
     content: '' !important;
     position: absolute !important;
     top: 0; left: 0; right: 0; bottom: 0;
     
-    /* Forzamos un azul sólido para descartar fallos de variables */
-    background: #4287f5 !important; 
+    /* VERDE ESMERALDA FORZADO */
+    background: #22c55e !important; 
     
     opacity: 0 !important;
     pointer-events: none !important;
     
-    /* SUBIMOS EL Z-INDEX: Debe estar por encima del texto y los iconos */
-    z-index: 9999 !important; 
+    /* POR ENCIMA DE TODO: Texto e iconos */
+    z-index: 999999 !important; 
     
-    /* El desvanecimiento es un poco más rápido para mayor nitidez */
-    transition: opacity 0.3s ease-out !important;
+    transition: opacity 0.4s ease-out !important;
 }
 
 .copy-flash.active::after {
-    /* SUBIMOS OPACIDAD: 0.5 es el punto dulce entre sutil y visible */
-    opacity: 0.5 !important; 
+    /* Opacidad alta para confirmar que funciona */
+    opacity: 0.6 !important; 
     transition: none !important;
+}
+
+
+
+
+/* --- EFECTO DE ÉXITO: ICONO CHECKMARK --- */
+
+/* Suaviza la transición cuando el icono cambie */
+.cmd-ctrl-btn {
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Estilo para el estado de éxito (Checkmark) */
+.copy-success {
+    color: #22c55e !important;
+    transform: scale(1.3) !important;
 }

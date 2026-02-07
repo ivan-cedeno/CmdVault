@@ -849,18 +849,78 @@ function changeTheme(themeName) {
 // ENTRADA MAESTRA: Redirige al sistema inteligente
 /* --- REEMPLAZA TU FUNCIÓN ACTUAL POR ESTA --- */
 
+/* --- BLOQUE DE SEGURIDAD CONSOLIDADO (new_sidepanel.js) --- */
+
+/**
+ * Ejecuta el copiado de comandos con feedback visual (Flash + Checkmark)
+ * y gestiona la apertura de modales para variables dinámicas.
+ */
+/**
+ * Procesa el copiado al portapapeles con feedback visual doble (Flash + Icono)
+ * @param {string} text - El comando a copiar.
+ * @param {string} name - Nombre del comando para logs.
+ * @param {HTMLElement} element - El contenedor 'wrap' que recibirá el flash.
+ */
+/**
+ * Versión Final Consolidada: Feedback Visual (Flash + Checkmark) y Copiado Inteligente.
+ */
+/**
+ * Versión de Producción: Feedback visual y copiado inteligente.
+ * Consolida el flash de fondo y el cambio de icono sin logs de depuración.
+ */
+/**
+ * Procesa el copiado con feedback visual dual:
+ * 1. Flash temático (Dorado/Azul) en el contenedor.
+ * 2. Checkmark verde (✅) en el botón de acción.
+ */
 function copyToClipboard(text, name = "Command", element = null) {
     if (!text) return;
 
-    // Si recibimos el elemento, encendemos el flash
+    // 1. CAPA DE FEEDBACK VISUAL
     if (element) {
-        element.classList.add('active');
-        // El flash dura 150ms, suficiente para ser percibido sin molestar
-        setTimeout(() => element.classList.remove('active'), 150);
+        try {
+            // Activar Flash Temático (Dorado en Light / Azul en Dark)
+            element.classList.add('active');
+            setTimeout(() => element.classList.remove('active'), 200);
+
+            // Localización agresiva del botón para el Checkmark
+            const copyBtn = element.querySelector('.cmd-ctrl-btn') || 
+                            element.querySelector('button') || 
+                            element.querySelector('.cmd-controls div');
+
+            if (copyBtn) {
+                const originalHTML = copyBtn.innerHTML;
+                
+                // Aplicar estado de éxito (Checkmark + Verde)
+                copyBtn.innerHTML = '✅';
+                copyBtn.style.color = '#22c55e'; 
+                copyBtn.style.fontWeight = 'bold';
+                copyBtn.style.position = 'relative';
+                copyBtn.style.zIndex = '1000000'; // Prioridad sobre el flash temático
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                    copyBtn.style.color = '';
+                    copyBtn.style.fontWeight = '';
+                    copyBtn.style.zIndex = '';
+                }, 1000);
+            }
+        } catch (error) {
+            // Falla silenciosa para no interrumpir el flujo de trabajo
+        }
     }
 
-    // El sistema sigue con su lógica inteligente (variables, etc.)
-    handleSmartCopy(text);
+    // 2. LÓGICA DE COPIADO REAL
+    const hasVariables = /{{(.*?)}}/.test(text);
+
+    if (hasVariables && typeof openSmartModal === 'function') {
+        openSmartModal(text);
+    } else if (typeof copyToClipboardReal === 'function') {
+        copyToClipboardReal(text);
+    } else {
+        // Respaldo directo si las funciones auxiliares no están disponibles
+        navigator.clipboard.writeText(text);
+    }
 }
 
 function showToast(m) {
@@ -1428,3 +1488,4 @@ async function copyToClipboardReal(text) {
         alert("Error al copiar: " + err);
     }
 }
+
