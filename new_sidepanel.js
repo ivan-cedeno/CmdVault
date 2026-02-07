@@ -185,19 +185,46 @@ function createNodeElement(node, filter, isFav = false) {
         iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
     }
 
+// 1. PROCESAMIENTO DEL NOMBRE CON RESALTADO (HIGHLIGHT)
     const nameSpan = document.createElement('span');
-    nameSpan.textContent = node.name || "Untitled";
+    const nameText = node.name || "Untitled";
 
+    if (filter && filter.trim() !== "") {
+        try {
+            // Escapamos caracteres especiales para evitar errores de Regex
+            const escapedFilter = filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedFilter})`, 'gi');
+            
+            // Inyectamos el span con la clase .search-highlight
+            nameSpan.innerHTML = nameText.replace(regex, '<span class="search-highlight">$1</span>');
+        } catch (e) {
+            nameSpan.textContent = nameText;
+        }
+    } else {
+        nameSpan.textContent = nameText;
+    }
+
+    // 2. CONSTRUCCIÓN DEL HEADER
     header.appendChild(iconSpan);
     header.appendChild(nameSpan);
 
+    // 3. PROCESAMIENTO DE TAGS (Manteniendo tu lógica actual)
     if (Array.isArray(node.tags) && node.tags.length > 0) {
         const tagsDiv = document.createElement('div');
         tagsDiv.style.marginLeft = 'auto';
+        tagsDiv.style.display = 'flex';
+        tagsDiv.style.gap = '4px';
+
         node.tags.forEach(t => {
             const badge = document.createElement('span');
             badge.className = 'tag-badge';
             badge.textContent = t;
+            
+            // Si el tag es 'precaution', aplicamos la clase especial
+            if (t.toLowerCase().trim() === 'precaution') {
+                badge.classList.add('precaution');
+            }
+            
             tagsDiv.appendChild(badge);
         });
         header.appendChild(tagsDiv);

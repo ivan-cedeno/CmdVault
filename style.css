@@ -1029,6 +1029,38 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     transform: translateY(-1px);
 }
 
+/* --- PULIDO FINAL V3: HIGHLIGHT & FOCUS --- */
+
+/* REEMPLAZA TU BLOQUE .search-highlight ACTUAL POR ESTE */
+
+.search-highlight {
+    /* Fondo Ámbar Translúcido: Destaca sin tapar */
+    background-color: rgba(255, 185, 0, 0.35) !important;
+    
+    /* Texto Blanco Puro: Máximo contraste sobre el ámbar */
+    color: #ffffff !important;
+    
+    /* Pequeña sombra al texto para que se lea mejor */
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+    
+    font-weight: 700;
+    border-radius: 4px; /* Un poco más redondeado */
+    padding: 1px 4px; /* Un poco más de aire a los lados */
+    
+    /* Sutil resplandor dorado */
+    box-shadow: 0 0 10px rgba(255, 185, 0, 0.2);
+}
+
+/* Mejora del Focus en el wrapper que ya tienes */
+.search-wrapper:focus-within {
+    background: rgba(30, 41, 59, 0.7) !important; /* Más oscuro al enfocar */
+    border-color: var(--md-sys-color-primary) !important;
+    /* Resplandor (Glow) más definido */
+    box-shadow: 0 0 0 3px rgba(66, 135, 245, 0.15), 
+                0 4px 12px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+}
+
 /* --- ICONOS DE CARPETA V3 --- */
 .folder-icon-v3 {
     width: 18px;
@@ -1206,6 +1238,59 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     background: rgba(0, 0, 0, 0.04);
     color: rgba(0, 0, 0, 0.6);
 }
+
+.theme-light .search-highlight,
+.light-mode .search-highlight {
+    /* Texto oscuro para máxima legibilidad sobre el dorado */
+    color: #1e293b !important; 
+    
+    /* Dorado con mayor opacidad para destacar en fondo blanco */
+    background-color: rgba(255, 185, 0, 0.5) !important;
+    
+    text-shadow: none !important;
+    font-weight: 700;
+}
+
+/* --- REFINAMIENTO DE CONTEXT MENU PARA MODO CLARO --- */
+
+.theme-light .context-menu,
+.light-mode .context-menu {
+    /* Vidrio esmerilado blanco premium */
+    background: rgba(255, 255, 255, 0.85) !important; 
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Encabezados internos (ej: "ICON TYPE") */
+.theme-light .context-menu .menu-header {
+    color: rgba(30, 41, 59, 0.6) !important;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+.theme-light .ctx-item,
+.light-mode .ctx-item {
+    color: #1e293b !important; /* El color Slate que ya usamos */
+    font-weight: 500;
+}
+
+.theme-light .ctx-item:hover,
+.light-mode .ctx-item:hover {
+    background: rgba(66, 135, 245, 0.1) !important;
+    color: var(--md-sys-color-primary) !important;
+}
+
+.theme-light .icon-grid-btn {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    color: #1e293b !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+}
+
+
 
 /* BADGE ESPECIAL: PRECAUTION */
 .tag-badge.precaution {
