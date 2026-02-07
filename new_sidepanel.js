@@ -248,12 +248,12 @@ function createNodeElement(node, filter, isFav = false) {
 
     if (node.type === 'command') {
         const wrap = document.createElement('div');
-        wrap.className = 'cmd-wrapper';
+        wrap.className = 'cmd-wrapper copy-flash'; // <--- Etiqueta necesaria para el CSS
         
         const pre = document.createElement('pre');
         pre.className = node.expanded ? 'cmd-preview expanded' : 'cmd-preview';
         pre.innerHTML = highlightSyntax(String(node.cmd || ""));
-        pre.onclick = () => copyToClipboard(node.cmd, node.name);
+        pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap); // <--- Pasamos 'wrap'
 
         const btn = document.createElement('div');
         btn.className = 'cmd-ctrl-btn';
@@ -847,12 +847,19 @@ function changeTheme(themeName) {
 }
 
 // ENTRADA MAESTRA: Redirige al sistema inteligente
-function copyToClipboard(text, name = "Command") {
+/* --- REEMPLAZA TU FUNCIÓN ACTUAL POR ESTA --- */
+
+function copyToClipboard(text, name = "Command", element = null) {
     if (!text) return;
 
-    // En lugar de copiar directo, pasamos por el filtro inteligente.
-    // Si tiene variables, abrirá el modal.
-    // Si NO tiene variables, el Smart Handler llamará a 'copyToClipboardReal' automáticamente.
+    // Si recibimos el elemento, encendemos el flash
+    if (element) {
+        element.classList.add('active');
+        // El flash dura 150ms, suficiente para ser percibido sin molestar
+        setTimeout(() => element.classList.remove('active'), 150);
+    }
+
+    // El sistema sigue con su lógica inteligente (variables, etc.)
     handleSmartCopy(text);
 }
 
@@ -1088,7 +1095,7 @@ function renderHistory() {
             const name = typeof item === 'string' ? 'Command' : item.name;
 
             const row = document.createElement('div');
-            row.className = 'tree-item';
+            row.className = 'history-item copy-flash'; // <--- Etiqueta necesaria para el CSS
             row.style.display = 'flex';
             row.style.flexDirection = 'column';
             row.style.alignItems = 'flex-start';
@@ -1110,7 +1117,7 @@ function renderHistory() {
             row.appendChild(titleSpan);
             row.appendChild(cmdSpan);
 
-            row.onclick = () => copyToClipboard(cmd, name);
+            row.onclick = () => copyToClipboard(cmd, name, row); // <--- Pasamos 'row'
             list.appendChild(row);
         });
     }
@@ -1299,10 +1306,17 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * 2. FUNCIÓN DE ENTRADA (Llama a esto desde tus botones de comando)
  */
-function copyToClipboard(text, name = "Command") {
+function copyToClipboard(text, name = "Command", element = null) {
     if (!text) return;
 
-    // Detectar variables {{...}}
+    // --- FEEDBACK VISUAL V3 (FLASH) ---
+    if (element) {
+        element.classList.add('active');
+        // 120ms es el tiempo ideal para un feedback táctil veloz
+        setTimeout(() => element.classList.remove('active'), 120);
+    }
+
+    // --- LÓGICA SMART COPY (DETECCIÓN DE VARIABLES) ---
     const hasVariables = /{{(.*?)}}/.test(text);
 
     if (hasVariables) {

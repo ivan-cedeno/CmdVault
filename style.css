@@ -1290,6 +1290,23 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
 }
 
+/* --- AJUSTE DE COLOR DE FLASH PARA TEMA CLARO --- */
+
+.theme-light .copy-flash::after,
+.light-mode .copy-flash::after {
+    /* Usamos un Dorado/Ámbar para que destaque sobre el fondo blanco */
+    background: #ffb900 !important; 
+    
+    /* En modo claro, un destello un poco más denso ayuda a la visibilidad */
+    opacity: 0 !important;
+}
+
+.theme-light .copy-flash.active::after,
+.light-mode .copy-flash.active::after {
+    /* Opacidad de confirmación para el modo claro */
+    opacity: 0.4 !important; 
+}
+
 
 
 /* BADGE ESPECIAL: PRECAUTION */
@@ -1305,4 +1322,36 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     background-color: #fbbf24 !important;
     color: #1e293b !important; /* Texto oscuro para contraste */
     box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+}
+
+/* --- REFINAMIENTO V3: FLASH DE ALTA VISIBILIDAD --- */
+
+.copy-flash {
+    position: relative !important;
+    /* Asegura que nada se salga del contenedor durante el brillo */
+    overflow: hidden !important; 
+}
+
+.copy-flash::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0; left: 0; right: 0; bottom: 0;
+    
+    /* Forzamos un azul sólido para descartar fallos de variables */
+    background: #4287f5 !important; 
+    
+    opacity: 0 !important;
+    pointer-events: none !important;
+    
+    /* SUBIMOS EL Z-INDEX: Debe estar por encima del texto y los iconos */
+    z-index: 9999 !important; 
+    
+    /* El desvanecimiento es un poco más rápido para mayor nitidez */
+    transition: opacity 0.3s ease-out !important;
+}
+
+.copy-flash.active::after {
+    /* SUBIMOS OPACIDAD: 0.5 es el punto dulce entre sutil y visible */
+    opacity: 0.5 !important; 
+    transition: none !important;
 }
