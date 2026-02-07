@@ -3,28 +3,28 @@ const FOLDER_COLORS = ['#ECEFF1', '#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#
 const GIST_FILENAME = 'ivan_helper_backup.json';
 
 // --- ESTADO GLOBAL ---
-let treeData = []; 
-let commandHistory = []; 
-let qaCollapsed = false; 
-let historyCollapsed = false; 
-let commandsCollapsed = false; 
-let contextTargetId = null; 
-let draggedId = null; 
-let appClipboard = null; 
-let ghToken = ""; 
-let currentTheme = "theme-dark"; 
-let toastTimeout = null; 
-let isDataLoaded = false; 
+let treeData = [];
+let commandHistory = [];
+let qaCollapsed = false;
+let historyCollapsed = false;
+let commandsCollapsed = false;
+let contextTargetId = null;
+let draggedId = null;
+let appClipboard = null;
+let ghToken = "";
+let currentTheme = "theme-dark";
+let toastTimeout = null;
+let isDataLoaded = false;
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 V14.2 Context Menu Injection Fix...");
     try {
-        injectContextMenu(); 
+        injectContextMenu();
         setupAppEvents();
         setupDocking();
         renderColorPalette(); // <--- ✅ CORRECCIÓN: Usar el nombre real de la función
-    } catch(e) { console.error("UI Init Error:", e); }
+    } catch (e) { console.error("UI Init Error:", e); }
     loadDataFromStorage();
 });
 
@@ -56,25 +56,25 @@ function loadDataFromStorage() {
                 collapsed: false,
                 color: FOLDER_COLORS[0]
             });
-            isDataLoaded = true; 
+            isDataLoaded = true;
             saveData();
         }
 
         commandHistory = Array.isArray(items.linuxHistory) ? items.linuxHistory : [];
         qaCollapsed = items.qaCollapsed || false;
         historyCollapsed = items.historyCollapsed || false;
-        commandsCollapsed = false; 
-        
+        commandsCollapsed = false;
+
         ghToken = items.ghToken || "";
-        
+
         if (items.savedTheme) changeTheme(items.savedTheme);
-        
+
         const tokenInput = document.getElementById('gh-token-input');
         if (tokenInput) tokenInput.value = ghToken;
-        
+
         const userInput = document.getElementById('username-input');
         if (userInput) userInput.value = items.username || 'user';
-        
+
         const title = document.querySelector('.app-title');
         if (title) title.textContent = `${items.username || 'user'}@CmdVault:~$`;
 
@@ -121,7 +121,7 @@ function refreshAll() {
 function updateHeaderIcons() {
     const setArrow = (id, state) => {
         const el = document.getElementById(id);
-        if(el) el.textContent = state ? '►' : '▼';
+        if (el) el.textContent = state ? '►' : '▼';
     };
     setArrow('cmd-arrow', commandsCollapsed);
     setArrow('hist-arrow', historyCollapsed);
@@ -132,7 +132,7 @@ function updateHeaderIcons() {
 function renderTree(filter) {
     const container = document.getElementById('tree-container');
     if (!container) return;
-    
+
     container.innerHTML = '';
     container.style.display = (commandsCollapsed && !filter) ? 'none' : 'block';
 
@@ -152,7 +152,7 @@ function renderTree(filter) {
 function createNodeElement(node, filter, isFav = false) {
     const row = document.createElement('div');
     row.className = `tree-item type-${node.type}`;
-    
+
     if (appClipboard && appClipboard.action === 'cut' && String(appClipboard.id) === String(node.id)) {
         row.classList.add('cut-state');
     }
@@ -163,35 +163,31 @@ function createNodeElement(node, filter, isFav = false) {
     header.className = 'item-header';
     header.style.display = 'flex';
     header.style.alignItems = 'center';
-    
+
     if (node.color && node.type === 'folder') header.style.color = node.color;
     if (node.description) header.title = node.description;
 
     // --- CIRUGÍA DE ICONOS V3 ---
     const iconSpan = document.createElement('span');
     iconSpan.style.marginRight = '8px';
-    iconSpan.style.display = 'flex'; // Centrado de SVG
+    iconSpan.style.display = 'flex'; 
     iconSpan.style.alignItems = 'center';
-    
+
     const collapsed = node.collapsed === true;
 
-    // Definición de moldes minimalistas (Stroke 1.5px)
     const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
-    const iconOpen   = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
-    const iconCmd    = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
+    const iconOpen = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
+    const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
 
-    // Lógica de inyección quirúrgica
     if (node.type === 'folder') {
         iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
     } else {
-        // Usa el icono del comando si existe, si no, usa el terminal minimalista
         iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
     }
-    // --- FIN CIRUGÍA DE ICONOS ---
-    
+
     const nameSpan = document.createElement('span');
     nameSpan.textContent = node.name || "Untitled";
-    
+
     header.appendChild(iconSpan);
     header.appendChild(nameSpan);
 
@@ -226,21 +222,25 @@ function createNodeElement(node, filter, isFav = false) {
     if (node.type === 'command') {
         const wrap = document.createElement('div');
         wrap.className = 'cmd-wrapper';
+        
         const pre = document.createElement('pre');
         pre.className = node.expanded ? 'cmd-preview expanded' : 'cmd-preview';
         pre.innerHTML = highlightSyntax(String(node.cmd || ""));
         pre.onclick = () => copyToClipboard(node.cmd, node.name);
-        
+
         const btn = document.createElement('div');
         btn.className = 'cmd-ctrl-btn';
-        
-        // OPCIONAL: Cambiamos también las flechas ▲/▼ por chevrons finos
-        btn.innerHTML = node.expanded 
-            ? `<svg class="folder-icon-v3" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"></polyline></svg>` 
-            : `<svg class="folder-icon-v3" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-            
+
+        // Iconos con pointer-events: none para asegurar que el clic llegue al div
+        btn.innerHTML = node.expanded
+            ? `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
+            : `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+        // MANEJO DE CLIC REFORZADO
         btn.onclick = (e) => {
-            e.stopPropagation();
+            e.preventDefault();  // Evita acciones por defecto
+            e.stopPropagation(); // DETIENE la propagación hacia el 'pre' (importante)
+            
             node.expanded = !node.expanded;
             saveData();
             refreshAll();
@@ -250,7 +250,7 @@ function createNodeElement(node, filter, isFav = false) {
         wrap.appendChild(btn);
         row.appendChild(wrap);
     }
-    
+
     const wrapper = document.createElement('div');
     wrapper.appendChild(row);
 
@@ -277,10 +277,10 @@ function createNodeElement(node, filter, isFav = false) {
 function setupAppEvents() {
     bindClick('qa-header', () => { qaCollapsed = !qaCollapsed; saveGlobalState(); refreshAll(); });
     bindClick('history-header', () => { historyCollapsed = !historyCollapsed; saveGlobalState(); refreshAll(); });
-    bindClick('commands-header', () => { 
-        commandsCollapsed = !commandsCollapsed; 
-        saveGlobalState(); 
-        refreshAll(); 
+    bindClick('commands-header', () => {
+        commandsCollapsed = !commandsCollapsed;
+        saveGlobalState();
+        refreshAll();
     });
 
     bindClick('btn-add-root', () => {
@@ -312,8 +312,8 @@ function setupAppEvents() {
     });
 
     bindClick('btn-save-token', () => {
-    const t = document.getElementById('gh-token-input').value.trim();
-    // Agregamos updateSettingsUI() para habilitar los botones visualmente tras guardar
+        const t = document.getElementById('gh-token-input').value.trim();
+        // Agregamos updateSettingsUI() para habilitar los botones visualmente tras guardar
         if (t) { ghToken = t; chrome.storage.local.set({ ghToken: t }, () => { showToast("💾 Saved"); updateSettingsUI(); }); }
     });
     bindClick('btn-sync-upload', () => uploadToGist());
@@ -343,7 +343,7 @@ function setupAppEvents() {
             e.stopPropagation();
             const target = e.target.closest('.ctx-item, .icon-option');
             if (!target) return;
-            
+
             const id = target.id;
             const close = () => ctxMenu.classList.add('hidden');
 
@@ -353,9 +353,9 @@ function setupAppEvents() {
             // NEW ACTIONS
             else if (id === 'ctx-expand-all') { toggleFolderRecursively(contextTargetId, false); close(); }
             else if (id === 'ctx-collapse-all') { toggleFolderRecursively(contextTargetId, true); close(); }
-            
+
             else if (id === 'ctx-pin-toggle') { togglePin(contextTargetId); close(); }
-            else if (id === 'ctx-delete') { if(confirm("Delete?")) execDelete(contextTargetId); close(); }
+            else if (id === 'ctx-delete') { if (confirm("Delete?")) execDelete(contextTargetId); close(); }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
             else if (id === 'ctx-add-cmd') { execAdd(contextTargetId, 'command'); close(); }
@@ -371,19 +371,19 @@ function setupAppEvents() {
     // 1. Exportar (Backup Local)
     bindClick('btn-export', () => {
         if (!treeData || treeData.length === 0) return showToast("⚠️ Nothing to backup");
-        
+
         const dataStr = JSON.stringify(treeData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         // Agregamos fecha al nombre para mejor organización
-        const date = new Date().toISOString().slice(0,10);
+        const date = new Date().toISOString().slice(0, 10);
         a.download = `cmdvault_backup_${date}.json`;
         document.body.appendChild(a); // Requerido en algunos contextos de navegador
         a.click();
-        
+
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast("💾 Backup Downloaded");
@@ -392,7 +392,7 @@ function setupAppEvents() {
     // 2. Importar (Restaurar Local)
     const fileInput = document.getElementById('file-input');
     bindClick('btn-import', () => {
-        if(fileInput) fileInput.click();
+        if (fileInput) fileInput.click();
     });
 
     if (fileInput) {
@@ -404,7 +404,7 @@ function setupAppEvents() {
             reader.onload = (ev) => {
                 try {
                     const importedData = JSON.parse(ev.target.result);
-                    
+
                     // Validación básica para asegurar que es un formato válido
                     if (Array.isArray(importedData)) {
                         treeData = importedData;
@@ -438,14 +438,14 @@ function setupAppEvents() {
                 color: FOLDER_COLORS[0]
             }];
             commandHistory = [];
-            
+
             // Limpiamos storage y variables
             chrome.storage.local.set({ linuxTree: treeData, linuxHistory: [] }, () => {
                 refreshAll();
                 showToast("🗑️ Factory Reset Complete");
                 // Opcional: Cerrar el panel de settings para ver el resultado
                 const settingsOverlay = document.getElementById('settings-overlay');
-                if(settingsOverlay) settingsOverlay.classList.add('hidden');
+                if (settingsOverlay) settingsOverlay.classList.add('hidden');
             });
         }
     });
@@ -486,7 +486,7 @@ function attachDragEvents(row, node) {
         const isFolderEmpty = (node.type === 'folder') && (!node.children || node.children.length === 0);
         row.style.borderTop = ''; row.style.borderBottom = ''; row.classList.remove('drop-inside');
         if (isFolderEmpty) {
-            row.classList.add('drop-inside'); 
+            row.classList.add('drop-inside');
             e.dataTransfer.dropEffect = 'copy';
             return;
         }
@@ -549,7 +549,7 @@ function performMove(sourceId, targetId, action) {
             target.children.push(item);
             target.collapsed = false;
         } else {
-            treeData.push(item); 
+            treeData.push(item);
         }
     } else {
         const targetList = findParentList(treeData, targetId);
@@ -596,11 +596,11 @@ function execPaste() {
         const sourceId = appClipboard.id;
         const targetId = contextTargetId;
         if (isDescendant(sourceId, targetId)) return showToast("❌ Recursion Error");
-        
+
         appClipboard = null; // Clean before move to clear visuals
         performMove(sourceId, targetId, 'inside');
         showToast("✅ Moved");
-    } 
+    }
     else {
         const copy = cloneNode(appClipboard.data);
         if (!target.children) target.children = [];
@@ -631,9 +631,9 @@ function execAdd(parentId, type) {
         if (n) addItemToTree(parentId, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: FOLDER_COLORS[0] });
     } else {
         // --- RESTAURACIÓN DE LA SECUENCIA DE PROMPTS DE V1 ---
-        
+
         // 1. Nombre
-        const n = prompt("Name:"); 
+        const n = prompt("Name:");
         if (!n) return; // Si cancela el nombre, abortamos igual que en V1
 
         // 2. Descripción (Faltaba en V2)
@@ -653,15 +653,15 @@ function execAdd(parentId, type) {
 
         if (c) {
             // Construimos el objeto completo con todas las propiedades
-            addItemToTree(parentId, { 
-                id: genId(), 
-                name: n, 
+            addItemToTree(parentId, {
+                id: genId(),
+                name: n,
                 description: d || "", // Guardamos descripción
-                cmd: c, 
+                cmd: c,
                 tags: tagsArray,      // Guardamos el array de tags para que se activen los badges
-                type: 'command', 
-                icon: '⌨️', 
-                expanded: false 
+                type: 'command',
+                icon: '⌨️',
+                expanded: false
             });
         }
     }
@@ -676,7 +676,7 @@ function execEdit(id) {
     if (node.type === 'folder') {
         const n = prompt("Edit Folder Name:", node.name);
         // Si el usuario da "Cancelar" (null) o lo deja vacío, no hacemos nada
-        if (n !== null && n.trim() !== "") { 
+        if (n !== null && n.trim() !== "") {
             node.name = n;
             saveData();
             refreshAll();
@@ -685,7 +685,7 @@ function execEdit(id) {
     }
 
     // CASO 2: Si es un COMANDO, editamos los 4 campos (Flujo de 4 pasos)
-    
+
     // 1. Nombre (Obligatorio)
     const n = prompt("Edit Name:", node.name);
     if (n === null) return; // Si cancela, abortamos la edición
@@ -704,10 +704,10 @@ function execEdit(id) {
     if (t === null) return;
 
     // --- APLICAR CAMBIOS ---
-    
+
     // Validamos que el nombre no quede vacío
     if (n.trim()) node.name = n;
-    
+
     node.description = d;
     node.cmd = c;
 
@@ -727,7 +727,7 @@ function execEdit(id) {
 function toggleFolderRecursively(id, shouldCollapse) {
     const targetNode = findNode(treeData, id);
     if (!targetNode) return;
-    
+
     // Función recursiva interna
     const traverse = (node) => {
         if (node.type === 'folder') {
@@ -822,7 +822,7 @@ function changeTheme(themeName) {
 // ENTRADA MAESTRA: Redirige al sistema inteligente
 function copyToClipboard(text, name = "Command") {
     if (!text) return;
-    
+
     // En lugar de copiar directo, pasamos por el filtro inteligente.
     // Si tiene variables, abrirá el modal.
     // Si NO tiene variables, el Smart Handler llamará a 'copyToClipboardReal' automáticamente.
@@ -847,14 +847,14 @@ function injectContextMenu() {
     // Verificar si ya existe expand-all para no duplicar
     if (document.getElementById('ctx-expand-all')) return;
 
-// HTML de los botones nuevos
-const newItems = `
+    // HTML de los botones nuevos
+    const newItems = `
     <div class="ctx-item" id="ctx-expand-all" style="display:none">🔽 Expand All</div>
     <div class="ctx-item" id="ctx-collapse-all" style="display:none">▶️ Collapse All</div>
     
     <hr class="ctx-hr" id="ctx-hr-collapse" style="display:none">
 `;
-    
+
     // Insertar ANTES de las opciones de portapapeles si existen, o antes de Editar
     const ref = document.getElementById('ctx-copy') || document.getElementById('ctx-edit');
     if (ref) {
@@ -866,7 +866,7 @@ const newItems = `
 function openContextMenu(e, node) {
     const menu = document.getElementById('context-menu');
     const isFolder = node.type === 'folder';
-    
+
     // Helper para manejar visibilidad
     const setVisibility = (id, show, displayStyle = 'block') => {
         const el = document.getElementById(id);
@@ -882,7 +882,7 @@ function openContextMenu(e, node) {
     };
 
     // --- 1. CONFIGURACIÓN DE CONTENIDO ---
-    
+
     // A. Sección de CARPETAS: Visible solo si es carpeta
     setVisibility('ctx-folder-section', isFolder, 'block');
     setVisibility('ctx-hr-collapse', isFolder, 'block');
@@ -896,12 +896,12 @@ function openContextMenu(e, node) {
         const pinBtn = document.getElementById('ctx-pin-toggle');
         if (pinBtn) {
             pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
-            pinBtn.style.display = 'flex'; 
+            pinBtn.style.display = 'flex';
         }
         // Nota: Ya no necesitamos ocultar manualmente .icon-selector porque 
         // el contenedor padre (ctx-cmd-section) ya está oculto.
     }
-    
+
     // D. Opciones de Expandir/Colapsar (Solo carpetas)
     setVisibility('ctx-expand-all', isFolder, 'flex');
     setVisibility('ctx-collapse-all', isFolder, 'flex');
@@ -918,41 +918,41 @@ function openContextMenu(e, node) {
     }
 
     // --- 2. POSICIONAMIENTO INTELIGENTE ---
-    
+
     // Paso A: Hacer visible pero transparente para medir dimensiones
-    menu.style.visibility = 'hidden'; 
+    menu.style.visibility = 'hidden';
     menu.classList.remove('hidden');
-    menu.style.display = 'block'; 
+    menu.style.display = 'block';
 
     // Paso B: Obtener dimensiones exactas
     const menuWidth = menu.offsetWidth;
     const menuHeight = menu.offsetHeight;
     const winWidth = window.innerWidth;
     const winHeight = window.innerHeight;
-    
+
     // Coordenadas iniciales del mouse
     let x = e.clientX;
     let y = e.clientY;
-    
+
     // Paso C: Detección de Colisiones
     // 1. Ajuste Horizontal
     if (x + menuWidth > winWidth) {
-        x = x - menuWidth; 
+        x = x - menuWidth;
     }
-    
+
     // 2. Ajuste Vertical
     if (y + menuHeight > winHeight) {
-        y = y - menuHeight; 
+        y = y - menuHeight;
     }
-    
+
     // 3. Márgenes de seguridad
     if (y < 10) y = 10;
     if (x < 10) x = 10;
-    
+
     // Paso D: Aplicar coordenadas y revelar
     menu.style.top = `${y}px`;
     menu.style.left = `${x}px`;
-    menu.style.visibility = 'visible'; 
+    menu.style.visibility = 'visible';
 }
 function renderColorPalette() {
     const p = document.getElementById('ctx-colors');
@@ -961,7 +961,7 @@ function renderColorPalette() {
     FOLDER_COLORS.forEach(c => {
         const d = document.createElement('div');
         d.className = 'color-dot'; d.style.backgroundColor = c;
-        d.onclick = () => { updateItem(contextTargetId, {color:c}); document.getElementById('context-menu').classList.add('hidden'); };
+        d.onclick = () => { updateItem(contextTargetId, { color: c }); document.getElementById('context-menu').classList.add('hidden'); };
         p.appendChild(d);
     });
 }
@@ -972,12 +972,12 @@ function setupDocking() {
         try {
             const w = await chrome.windows.getCurrent();
             if (w.type === 'popup') {
-                const m = await chrome.windows.getLastFocused({windowTypes:['normal']});
-                if(m) { await chrome.sidePanel.open({windowId: m.id}); window.close(); }
+                const m = await chrome.windows.getLastFocused({ windowTypes: ['normal'] });
+                if (m) { await chrome.sidePanel.open({ windowId: m.id }); window.close(); }
             } else {
                 await chrome.windows.create({ url: 'sidepanel.html', type: 'popup', width: 400, height: 600 });
             }
-        } catch(e) { console.error("Dock error", e); }
+        } catch (e) { console.error("Dock error", e); }
     };
 }
 
@@ -991,7 +991,7 @@ function isVisible(n, f) {
         const tagToSearch = query.substring(1);
         // Validamos que n.tags exista y sea un array antes de buscar
         const tagMatch = Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes(tagToSearch));
-        
+
         // Si el nodo cumple, es visible. Si no, revisamos si algún hijo cumple (para mostrar la carpeta padre)
         return n.children ? (tagMatch || n.children.some(c => isVisible(c, f))) : tagMatch;
     }
@@ -1046,16 +1046,16 @@ function renderFavorites() {
 
 function renderHistory() {
     const list = document.getElementById('history-list');
-    if(!list) return;
+    if (!list) return;
     list.innerHTML = '';
     const container = document.getElementById('history-container');
-    if(historyCollapsed) {
-       list.style.display = 'none';
+    if (historyCollapsed) {
+        list.style.display = 'none';
     } else {
-       list.style.display = 'block';
+        list.style.display = 'block';
     }
 
-    if(!historyCollapsed && Array.isArray(commandHistory)) {
+    if (!historyCollapsed && Array.isArray(commandHistory)) {
         commandHistory.slice(0, 5).forEach((item) => {
             const cmd = typeof item === 'string' ? item : item.cmd;
             const name = typeof item === 'string' ? 'Command' : item.name;
@@ -1066,7 +1066,7 @@ function renderHistory() {
             row.style.flexDirection = 'column';
             row.style.alignItems = 'flex-start';
             row.style.padding = '8px';
-            
+
             const titleSpan = document.createElement('span');
             titleSpan.style.fontWeight = 'bold';
             titleSpan.style.fontSize = '0.85em';
@@ -1092,18 +1092,18 @@ function renderHistory() {
 function updateSettingsUI() {
     // 1. Actualizar Input
     const tInput = document.getElementById('gh-token-input');
-    if(tInput) tInput.value = ghToken || "";
+    if (tInput) tInput.value = ghToken || "";
 
     // 2. Controlar estado de los botones (Habilitar/Deshabilitar)
     const btnUp = document.getElementById('btn-sync-upload');
     const btnDown = document.getElementById('btn-sync-download');
 
     if (ghToken) {
-        if(btnUp) { btnUp.disabled = false; btnUp.style.opacity = "1"; btnUp.style.cursor = "pointer"; }
-        if(btnDown) { btnDown.disabled = false; btnDown.style.opacity = "1"; btnDown.style.cursor = "pointer"; }
+        if (btnUp) { btnUp.disabled = false; btnUp.style.opacity = "1"; btnUp.style.cursor = "pointer"; }
+        if (btnDown) { btnDown.disabled = false; btnDown.style.opacity = "1"; btnDown.style.cursor = "pointer"; }
     } else {
-        if(btnUp) { btnUp.disabled = true; btnUp.style.opacity = "0.5"; btnUp.style.cursor = "not-allowed"; }
-        if(btnDown) { btnDown.disabled = true; btnDown.style.opacity = "0.5"; btnDown.style.cursor = "not-allowed"; }
+        if (btnUp) { btnUp.disabled = true; btnUp.style.opacity = "0.5"; btnUp.style.cursor = "not-allowed"; }
+        if (btnDown) { btnDown.disabled = true; btnDown.style.opacity = "0.5"; btnDown.style.cursor = "not-allowed"; }
     }
 }
 // En new_sidepanel.js (Reemplazar la función placeholder autoSyncToCloud y agregar el resto)
@@ -1111,21 +1111,21 @@ function updateSettingsUI() {
 // --- GITHUB SYNC ENGINE (MIGRADO DE V1) ---
 
 function updateSyncIcon(state) {
-    const icon = document.getElementById('sync-indicator'); 
+    const icon = document.getElementById('sync-indicator');
     if (!icon) return; // Protección por si el elemento no existe en el HTML V2
-    if (state === 'working') { 
-        icon.classList.add('sync-working'); 
-        icon.classList.remove('sync-success'); 
-    } else if (state === 'success') { 
-        icon.classList.remove('sync-working'); 
-        icon.classList.add('sync-success'); 
-        setTimeout(() => icon.classList.remove('sync-success'), 3000); 
+    if (state === 'working') {
+        icon.classList.add('sync-working');
+        icon.classList.remove('sync-success');
+    } else if (state === 'success') {
+        icon.classList.remove('sync-working');
+        icon.classList.add('sync-success');
+        setTimeout(() => icon.classList.remove('sync-success'), 3000);
     }
 }
 
 async function uploadToGist(isRetry = false) {
     if (!ghToken) return showToast("❌ Save GitHub Token first");
-    
+
     if (!isRetry) showToast("☁️ Syncing with GitHub...");
 
     const body = {
@@ -1146,7 +1146,7 @@ async function uploadToGist(isRetry = false) {
     try {
         const response = await fetch(url, {
             method: method,
-            headers: { 
+            headers: {
                 'Authorization': `Bearer ${ghToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/vnd.github.v3+json'
@@ -1162,7 +1162,7 @@ async function uploadToGist(isRetry = false) {
             if (isRetry) throw new Error("Check token permissions.");
             console.warn("⚠️ Gist missing. Creating new...");
             localStorage.removeItem('gistId');
-            return await uploadToGist(true); 
+            return await uploadToGist(true);
         }
 
         if (!response.ok) {
@@ -1204,8 +1204,8 @@ async function downloadFromGist() {
         if (data) {
             treeData = data;
             // IMPORTANTE: Aquí adaptamos a la V2 usando refreshAll()
-            chrome.storage.local.set({linuxTree: treeData}, () => {
-                refreshAll(); 
+            chrome.storage.local.set({ linuxTree: treeData }, () => {
+                refreshAll();
             });
             showToast("✅ Data restored");
         }
@@ -1222,7 +1222,7 @@ async function autoSyncToCloud() {
         // Lógica simplificada para auto-guardado: solo actualiza si ya existe un ID conocido
         // para evitar crear Gists infinitos accidentalmente.
         let gistId = localStorage.getItem('gistId');
-        if (!gistId) return; 
+        if (!gistId) return;
 
         const body = {
             files: { [GIST_FILENAME]: { content: JSON.stringify(treeData, null, 2) } }
@@ -1274,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function copyToClipboard(text, name = "Command") {
     if (!text) return;
-    
+
     // Detectar variables {{...}}
     const hasVariables = /{{(.*?)}}/.test(text);
 
@@ -1289,12 +1289,12 @@ function copyToClipboard(text, name = "Command") {
  * 3. ABRIR MODAL (Actualizado con Vista Previa)
  */
 function openSmartModal(text) {
-    globalPendingCommand = text; 
-    
+    globalPendingCommand = text;
+
     const modal = document.getElementById('dynamic-modal');
     const container = document.getElementById('dynamic-form-container');
     const previewBox = document.getElementById('command-preview'); // <--- NUEVO REFERENCIA
-    
+
     // 1. Mostrar el comando original como referencia
     if (previewBox) {
         previewBox.textContent = text;
@@ -1311,7 +1311,7 @@ function openSmartModal(text) {
     detectedVars.forEach(varName => {
         const div = document.createElement('div');
         div.style.marginBottom = "10px";
-        
+
         // Etiqueta más limpia
         div.innerHTML = `
             <label style="display:block; font-size:11px; font-weight:bold; margin-bottom:4px; color:#666;">${varName.toUpperCase()}</label>
@@ -1326,11 +1326,11 @@ function openSmartModal(text) {
     // 4. Mostrar
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
-    
+
     // Focus
     setTimeout(() => {
         const first = container.querySelector('input');
-        if(first) first.focus();
+        if (first) first.focus();
     }, 100);
 }
 
@@ -1339,7 +1339,7 @@ function openSmartModal(text) {
  */
 function executeSmartCopy() {
     // DEBUG: Si ves esta alerta, el botón funciona y el problema es la lógica de reemplazo.
-    console.log("🖱️ Click detectado en botón Copy"); 
+    console.log("🖱️ Click detectado en botón Copy");
 
     let finalCmd = globalPendingCommand;
     const inputs = document.querySelectorAll('.dynamic-input-field');
@@ -1353,10 +1353,10 @@ function executeSmartCopy() {
     });
 
     console.log("Comando Final:", finalCmd);
-    
+
     // Ejecutar copia
     copyToClipboardReal(finalCmd);
-    
+
     // Cerrar
     closeDynamicModal();
 }
@@ -1378,10 +1378,10 @@ async function copyToClipboardReal(text) {
     try {
         await navigator.clipboard.writeText(text);
         if (typeof showToast === 'function') showToast("📋 Copied!");
-        
+
         // Historial (Simplificado para evitar errores)
         if (typeof commandHistory !== 'undefined') {
-             // Tu lógica de historial aquí si la necesitas...
+            // Tu lógica de historial aquí si la necesitas...
         }
     } catch (err) {
         alert("Error al copiar: " + err);

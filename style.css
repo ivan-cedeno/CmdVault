@@ -342,22 +342,9 @@ input[type="text"]#search-input:focus {
 }
 
 /* COMANDOS Y SINTAXIS */
-.cmd-wrapper {
-    display: flex; align-items: stretch; margin-top: 4px;
-    background-color: var(--cmd-bg); border-radius: 6px;
-    overflow: hidden; border: 1px solid var(--md-sys-color-surface-container-high);
-}
-.cmd-preview {
-    flex: 1; padding: 10px; margin: 0; font-family: var(--font-code);
-    font-size: 0.8rem; color: var(--md-sys-color-on-surface);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: copy;
-}
-.cmd-preview.expanded { white-space: pre-wrap; word-break: break-all; }
-.cmd-ctrl-btn {
-    width: 28px; display: flex; align-items: center; justify-content: center;
-    background-color: var(--md-sys-color-surface-container-high);
-    color: var(--md-sys-color-outline); cursor: pointer; font-size: 0.7rem;
-}
+
+
+
 .sh-keyword { color: #ff7b72; font-weight: bold; }
 .sh-string { color: #a5d6ff; }
 .sh-flag { color: #79c0ff; font-style: italic; }
@@ -366,6 +353,10 @@ body.theme-light .sh-keyword { color: #d73a49; }
 body.theme-light .sh-string { color: #032f62; }
 body.theme-hacker .sh-keyword { color: #fff; }
 body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
+
+
+
+
 
 /* ANIMACIONES */
 .folder-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.25s ease-out; }
@@ -985,4 +976,138 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     transform: scale(1.1);
     opacity: 1;
     color: var(--md-sys-color-primary);
+}
+
+/* ==========================================================================
+   COMMAND CARDS V3 (ESTILO TARJETA FLOTANTE MINIMALISTA)
+   ========================================================================== */
+
+/* 1. EL CONTENEDOR PRINCIPAL (LA TARJETA) */
+.cmd-wrapper {
+    position: relative; /* Necesario para posicionar el botón de copia adentro */
+    display: flex;
+    flex-direction: column;
+    
+    /* Estilo "Cyber-Glass" */
+    background: rgba(15, 23, 42, 0.3); /* Fondo oscuro muy translúcido */
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.08)); /* Borde casi invisible */
+    border-radius: 12px; /* Esquinas muy redondeadas (estilo moderno) */
+    
+    /* Espaciado y Márgenes */
+    margin: 8px 0 8px 12px; /* Alejado del borde izquierdo para jerarquía */
+    padding: 12px 14px; /* Padding interno cómodo para que el texto respire */
+    
+    /* Transición suave para el efecto hover */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efecto Hover: La tarjeta "despierta" */
+.cmd-wrapper:hover {
+    background: rgba(15, 23, 42, 0.5); /* Un poco más opaco */
+    border-color: var(--md-sys-color-primary); /* El borde toma el color del tema */
+    
+    /* Resplandor suave dinámico (igual que el search box) */
+    box-shadow: 0 0 12px var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.15));
+    
+    transform: translateY(-1px); /* Sutil efecto de levitación */
+}
+
+/* 2. EL ÁREA DE CÓDIGO (TEXTO) */
+/* 1. ESTADO BASE: Comando colapsado (una sola línea) */
+.cmd-preview {
+    background: transparent !important;
+    border: none !important;
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--md-sys-color-on-surface, #e2e8f0);
+    padding: 0 !important;
+    margin: 0 !important;
+    
+    /* EL ESPACIO DE SEGURIDAD: 
+       Evita que el texto tape el botón en la esquina */
+    padding-right: 40px !important; 
+    
+    /* Efecto de recorte con puntos suspensivos (...) */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+    cursor: copy;
+    position: relative;
+    z-index: 1; /* Por debajo del botón (que tiene 999) */
+}
+
+/* 2. ESTADO EXPANDIDO: Se activa al hacer clic en el chevron */
+.cmd-preview.expanded {
+    white-space: pre-wrap !important; /* Permite saltos de línea */
+    word-break: break-all !important;  /* Evita que el texto se salga */
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-height: none !important;       /* Permite que la tarjeta crezca */
+}
+
+/* Estilo para el resaltado de sintaxis (ajusta los colores si es necesario) */
+.syntax-highlight {
+    color: var(--md-sys-color-primary); /* Usa el color del tema para resaltar */
+    font-weight: 500;
+}
+
+/* 3. EL BOTÓN DE COPIAR/EXPANDIR INTEGRADO */
+.cmd-ctrl-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    
+    /* Fondo sutil que se mezcla con la tarjeta */
+    background: rgba(255,255,255,0.03);
+    color: var(--md-sys-color-on-surface-variant);
+    
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+    
+    /* --- ESTA ES LA LÍNEA QUE ARREGLA EL CLIC --- */
+    z-index: 10; /* Trae el botón al frente, sobre el texto */
+}
+
+.cmd-wrapper:hover .cmd-ctrl-btn {
+    opacity: 1; /* Se ilumina junto con la tarjeta */
+}
+
+.cmd-ctrl-btn:hover {
+    /* Resalte al pasar el mouse sobre el botón específico */
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-primary);
+}
+
+/* 4. COMPATIBILIDAD CON TEMA CLARO (Light Mode Fix) */
+.theme-light .cmd-wrapper,
+.light-mode .cmd-wrapper {
+    background: rgba(255, 255, 255, 0.7) !important; /* Vidrio esmerilado claro */
+    border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.theme-light .cmd-wrapper:hover,
+.light-mode .cmd-wrapper:hover {
+    border-color: var(--md-sys-color-primary) !important;
+}
+
+.theme-light .cmd-preview,
+.light-mode .cmd-preview {
+    color: #1e293b !important; /* Texto oscuro para legibilidad */
+}
+
+.theme-light .cmd-ctrl-btn,
+.light-mode .cmd-ctrl-btn {
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(0, 0, 0, 0.6);
 }
