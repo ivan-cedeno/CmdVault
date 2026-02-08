@@ -182,9 +182,16 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     iconSpan.style.display = 'flex';
     iconSpan.style.alignItems = 'center';
 
+    // --- ICONOS V3: VERSIÓN PERSPECTIVA PREMIUM ---
     const collapsed = node.collapsed === true;
-    const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
-    const iconOpen = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
+
+    // Carpeta Cerrada: Diseño más redondeado y robusto
+    const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>`;
+
+    // Carpeta Abierta: Efecto de profundidad (la tapa se abre hacia el usuario)
+    const iconOpen = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"></path></svg>`;
+
+    // Icono de Comando: Se mantiene el estilo de terminal alineado con los nuevos folders
     const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
 
     if (node.type === 'folder') {
