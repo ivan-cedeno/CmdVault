@@ -1433,3 +1433,28 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .item-header.collapsed .folder-icon-v3 {
     transform: rotate(-90deg);
 }
+
+/* --- OPCIÓN B: PALETA DE COLORES --- */
+#ctx-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    background: var(--md-sys-color-surface-container-high);
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.color-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s, border 0.2s;
+    border: 2px solid transparent;
+}
+
+.color-dot:hover {
+    transform: scale(1.3);
+    border-color: white;
+}

@@ -1,4 +1,4 @@
-const FOLDER_COLORS = ['#ECEFF1', '#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#7C4DFF', '#424242'];
+const FOLDER_COLORS = ['#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#7C4DFF', '#CFD8DC', '#424242'];
 
 const GIST_FILENAME = 'ivan_helper_backup.json';
 
@@ -54,7 +54,7 @@ function loadDataFromStorage() {
                 type: "folder",
                 children: [],
                 collapsed: false,
-                color: FOLDER_COLORS[0]
+                color: null
             });
             isDataLoaded = true;
             saveData();
@@ -149,7 +149,8 @@ function renderTree(filter) {
     });
 }
 
-function createNodeElement(node, filter, isFav = false) {
+// PUNTO 1: Añadimos 'inheritedColor' como cuarto parámetro (neutro por defecto)
+function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     const row = document.createElement('div');
     row.className = `tree-item type-${node.type}`;
 
@@ -164,19 +165,27 @@ function createNodeElement(node, filter, isFav = false) {
     header.style.display = 'flex';
     header.style.alignItems = 'center';
 
-    if (node.color && node.type === 'folder') header.style.color = node.color;
+    // PUNTO 2: Lógica de Prioridad de Color
+    // 1. Color propio del nodo (node.color) 
+    // 2. Si no tiene, usa el del padre (inheritedColor)
+    const activeColor = node.color || inheritedColor;
+
+    if (activeColor && node.type === 'folder') {
+        header.style.color = activeColor;
+    }
+    
     if (node.description) header.title = node.description;
 
-    // --- ICONOS V3 ---
+    // --- ICONOS V3 --- (Se mantienen tus variables actuales)
     const iconSpan = document.createElement('span');
     iconSpan.style.marginRight = '8px';
-    iconSpan.style.display = 'flex'; 
+    iconSpan.style.display = 'flex';
     iconSpan.style.alignItems = 'center';
 
     const collapsed = node.collapsed === true;
-    const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
-    const iconOpen = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
-    const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
+    const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+    const iconOpen = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
+    const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
 
     if (node.type === 'folder') {
         iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
@@ -217,17 +226,13 @@ function createNodeElement(node, filter, isFav = false) {
         header.appendChild(tagsDiv);
     }
 
-    // --- CAMBIO 1: CLIC SIN RE-RENDERIZADO TOTAL (Para permitir animación) ---
     header.onclick = () => {
         if (node.type === 'folder' && !isFav) {
             node.collapsed = !node.collapsed;
             saveData();
-            
-            // Toggle de clase visual para disparar la animación CSS
             const content = wrapper.querySelector('.folder-content');
             if (content) {
                 content.classList.toggle('collapsed', node.collapsed);
-                // Actualizamos el icono sin refrescar todo el árbol
                 iconSpan.innerHTML = node.collapsed ? iconClosed : iconOpen;
             }
         }
@@ -270,12 +275,10 @@ function createNodeElement(node, filter, isFav = false) {
     const wrapper = document.createElement('div');
     wrapper.appendChild(row);
 
-    // --- CAMBIO 2: RENDERIZADO SIEMPRE (Oculto por CSS) ---
     if (!isFav && node.children && node.type === 'folder') {
         const inner = document.createElement('div');
         inner.className = 'folder-content';
-        
-        // Si la carpeta está cerrada y no hay filtro, le ponemos la clase que el CSS anima
+
         if (node.collapsed && !filter) {
             inner.classList.add('collapsed');
         }
@@ -284,10 +287,11 @@ function createNodeElement(node, filter, isFav = false) {
         inner.style.marginLeft = "12px";
         inner.style.paddingLeft = "8px";
 
-        // IMPORTANTE: Renderizamos los hijos siempre para que la transición de altura funcione
+        // PUNTO 3: Propagación del ADN de color hacia los hijos
         node.children.forEach(child => {
             if (child && isVisible(child, filter)) {
-                inner.appendChild(createNodeElement(child, filter));
+                // Pasamos el 'activeColor' de este nodo como el 'inheritedColor' del hijo
+                inner.appendChild(createNodeElement(child, filter, false, activeColor));
             }
         });
         wrapper.appendChild(inner);
@@ -308,7 +312,7 @@ function setupAppEvents() {
     bindClick('btn-add-root', () => {
         const n = prompt("New Root Folder:");
         if (n) {
-            addItemToTree(null, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: FOLDER_COLORS[0] });
+            addItemToTree(null, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: null });
         }
     });
 
@@ -457,7 +461,7 @@ function setupAppEvents() {
                 type: "folder",
                 children: [],
                 collapsed: false,
-                color: FOLDER_COLORS[0]
+                color: null
             }];
             commandHistory = [];
 
@@ -650,7 +654,7 @@ function execAdd(parentId, type) {
     if (type === 'folder') {
         const n = prompt("Folder Name:");
         // Nota: Aquí ya usa FOLDER_COLORS[0] que acabamos de cambiar a Perla
-        if (n) addItemToTree(parentId, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: FOLDER_COLORS[0] });
+        if (n) addItemToTree(parentId, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: null });
     } else {
         // --- RESTAURACIÓN DE LA SECUENCIA DE PROMPTS DE V1 ---
 
@@ -913,7 +917,7 @@ function copyToClipboard(text, name = "Command", element = null) {
         // En V1 el historial guarda solo el texto (string)
         commandHistory = commandHistory.filter(c => c !== text);
         commandHistory.unshift(text);
-        
+
         if (commandHistory.length > 15) commandHistory.pop();
 
         // Persistencia exacta a la V1
@@ -1059,16 +1063,54 @@ function openContextMenu(e, node) {
     menu.style.left = `${x}px`;
     menu.style.visibility = 'visible';
 }
+/**
+ * Opción B: Renderiza los puntos de color en el menú contextual.
+ * Ajuste V3: Integra refreshAll() para actualización inmediata.
+ */
 function renderColorPalette() {
     const p = document.getElementById('ctx-colors');
     if (!p) return;
+
     p.innerHTML = '';
+
     FOLDER_COLORS.forEach(c => {
         const d = document.createElement('div');
-        d.className = 'color-dot'; d.style.backgroundColor = c;
-        d.onclick = () => { updateItem(contextTargetId, { color: c }); document.getElementById('context-menu').classList.add('hidden'); };
+        d.className = 'color-dot';
+        d.style.backgroundColor = c;
+
+        d.onclick = () => {
+            // 1. Aplicar cambio (usando la función que acabamos de agregar)
+            const updated = updateItemProperty(treeData, contextTargetId, { color: c });
+
+            if (updated) {
+                // 2. Persistencia y Renderizado
+                saveData();
+                if (typeof refreshAll === 'function') refreshAll();
+
+                // 3. UI: Cerrar menú
+                const menu = document.getElementById('context-menu');
+                if (menu) menu.classList.add('hidden');
+                console.log("🎨 Color aplicado exitosamente:", c);
+            } else {
+                console.error("❌ Error: No se encontró el folder con ID:", contextTargetId);
+            }
+        };
         p.appendChild(d);
     });
+}
+
+function updateItemProperty(list, id, properties) {
+    for (let node of list) {
+        // Normalizamos IDs a String para asegurar que la comparación sea exitosa
+        if (String(node.id) === String(id)) {
+            Object.assign(node, properties);
+            return true;
+        }
+        if (node.children && updateItemProperty(node.children, id, properties)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function setupDocking() {
@@ -1388,13 +1430,13 @@ function copyToClipboard(text, name = "Command", element = null) {
         try {
             element.classList.add('active');
             setTimeout(() => element.classList.remove('active'), 200);
-            
+
             const btn = element.querySelector('.cmd-ctrl-btn');
             if (btn) {
                 const old = btn.innerHTML;
                 btn.innerHTML = '✅';
                 btn.style.color = '#22c55e';
-                
+
                 setTimeout(() => {
                     btn.innerHTML = old;
                     btn.style.color = '';
@@ -1413,7 +1455,7 @@ function copyToClipboard(text, name = "Command", element = null) {
 
         // Insertar el objeto con Nombre y Comando
         commandHistory.unshift({ cmd: text, name: name });
-        
+
         // --- AJUSTE QUIRÚRGICO: Límite de 10 comandos ---
         if (commandHistory.length > 10) {
             commandHistory.pop();
