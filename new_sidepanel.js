@@ -873,52 +873,68 @@ function changeTheme(themeName) {
  * 1. Flash temático (Dorado/Azul) en el contenedor.
  * 2. Checkmark verde (✅) en el botón de acción.
  */
+/**
+ * Versión de Producción V3.1: Feedback visual, Copiado y Registro en Historial.
+ */
+/**
+ * Versión Final: Feedback Visual + Gestión de Historial (Restaurada de V1)
+ */
+/**
+ * Versión de Producción Final: Feedback Visual + Persistencia de Historial.
+ */
+/**
+ * Versión V3.3: Restauración Forzada de Historial y Feedback Visual.
+ */
+/**
+ * Versión V3.3: Restauración Forzada de Historial y Feedback Visual.
+ */
+/**
+ * Versión de Producción Final (Fix Historial): Feedback Visual + Persistencia Garantizada.
+ */
+/**
+ * Versión Consolidada (Historial V1 + Estética V3)
+ * Restaura la actualización inmediata de LAST USED y mantiene el flash temático.
+ */
 function copyToClipboard(text, name = "Command", element = null) {
+    // LOG DE IMPACTO: Si no ves esto, el problema es el Paso 2 (abajo)
+    console.log("⚡ EJECUTANDO COPIADO PARA:", name);
+
     if (!text) return;
 
-    // 1. CAPA DE FEEDBACK VISUAL
+    // 1. FEEDBACK VISUAL (Estética V3)
     if (element) {
-        try {
-            // Activar Flash Temático (Dorado en Light / Azul en Dark)
-            element.classList.add('active');
-            setTimeout(() => element.classList.remove('active'), 200);
-
-            // Localización agresiva del botón para el Checkmark
-            const copyBtn = element.querySelector('.cmd-ctrl-btn') || 
-                            element.querySelector('button') || 
-                            element.querySelector('.cmd-controls div');
-
-            if (copyBtn) {
-                const originalHTML = copyBtn.innerHTML;
-                
-                // Aplicar estado de éxito (Checkmark + Verde)
-                copyBtn.innerHTML = '✅';
-                copyBtn.style.color = '#22c55e'; 
-                copyBtn.style.fontWeight = 'bold';
-                copyBtn.style.position = 'relative';
-                copyBtn.style.zIndex = '1000000'; // Prioridad sobre el flash temático
-
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalHTML;
-                    copyBtn.style.color = '';
-                    copyBtn.style.fontWeight = '';
-                    copyBtn.style.zIndex = '';
-                }, 1000);
-            }
-        } catch (error) {
-            // Falla silenciosa para no interrumpir el flujo de trabajo
+        element.classList.add('active');
+        setTimeout(() => element.classList.remove('active'), 200);
+        const btn = element.querySelector('.cmd-ctrl-btn') || element.querySelector('button');
+        if (btn) {
+            const old = btn.innerHTML;
+            btn.innerHTML = '✅';
+            setTimeout(() => { btn.innerHTML = old; }, 1000);
         }
     }
 
-    // 2. LÓGICA DE COPIADO REAL
-    const hasVariables = /{{(.*?)}}/.test(text);
+    // 2. LÓGICA DE HISTORIAL (Formato V1: Solo Strings)
+    if (typeof commandHistory !== 'undefined') {
+        // En V1 el historial guarda solo el texto (string)
+        commandHistory = commandHistory.filter(c => c !== text);
+        commandHistory.unshift(text);
+        
+        if (commandHistory.length > 15) commandHistory.pop();
 
+        // Persistencia exacta a la V1
+        chrome.storage.local.set({ linuxHistory: commandHistory }, () => {
+            console.log("💾 Storage actualizado:", commandHistory);
+            if (typeof renderHistory === 'function') {
+                renderHistory(); // Esta función de la V1 ahora sí entenderá los datos
+            }
+        });
+    }
+
+    // 3. COPIADO Y VARIABLES
+    const hasVariables = /{{(.*?)}}/.test(text);
     if (hasVariables && typeof openSmartModal === 'function') {
         openSmartModal(text);
-    } else if (typeof copyToClipboardReal === 'function') {
-        copyToClipboardReal(text);
     } else {
-        // Respaldo directo si las funciones auxiliares no están disponibles
         navigator.clipboard.writeText(text);
     }
 }
@@ -1150,7 +1166,7 @@ function renderHistory() {
     }
 
     if (!historyCollapsed && Array.isArray(commandHistory)) {
-        commandHistory.slice(0, 5).forEach((item) => {
+        commandHistory.slice(0, 10).forEach((item) => {
             const cmd = typeof item === 'string' ? item : item.cmd;
             const name = typeof item === 'string' ? 'Command' : item.name;
 
@@ -1366,23 +1382,62 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * 2. FUNCIÓN DE ENTRADA (Llama a esto desde tus botones de comando)
  */
+/**
+ * Versión Consolidada V4.0: Feedback Visual + Historial Compatible V1.
+ */
 function copyToClipboard(text, name = "Command", element = null) {
     if (!text) return;
 
-    // --- FEEDBACK VISUAL V3 (FLASH) ---
+    // 1. FEEDBACK VISUAL (Flash y Checkmark)
     if (element) {
-        element.classList.add('active');
-        // 120ms es el tiempo ideal para un feedback táctil veloz
-        setTimeout(() => element.classList.remove('active'), 120);
+        try {
+            element.classList.add('active');
+            setTimeout(() => element.classList.remove('active'), 200);
+            
+            const btn = element.querySelector('.cmd-ctrl-btn');
+            if (btn) {
+                const old = btn.innerHTML;
+                btn.innerHTML = '✅';
+                btn.style.color = '#22c55e';
+                
+                setTimeout(() => {
+                    btn.innerHTML = old;
+                    btn.style.color = '';
+                }, 1000);
+            }
+        } catch (e) { /* Error visual silencioso */ }
     }
 
-    // --- LÓGICA SMART COPY (DETECCIÓN DE VARIABLES) ---
-    const hasVariables = /{{(.*?)}}/.test(text);
+    // 2. LÓGICA DE HISTORIAL (Límite subido a 10)
+    if (typeof commandHistory !== 'undefined') {
+        // Filtrar duplicados para mover el comando actual al principio
+        commandHistory = commandHistory.filter(item => {
+            const cmdText = typeof item === 'string' ? item : item.cmd;
+            return cmdText !== text;
+        });
 
-    if (hasVariables) {
+        // Insertar el objeto con Nombre y Comando
+        commandHistory.unshift({ cmd: text, name: name });
+        
+        // --- AJUSTE QUIRÚRGICO: Límite de 10 comandos ---
+        if (commandHistory.length > 10) {
+            commandHistory.pop();
+        }
+
+        // Persistencia en Chrome Storage
+        chrome.storage.local.set({ linuxHistory: commandHistory }, () => {
+            if (typeof renderHistory === 'function') {
+                renderHistory();
+            }
+        });
+    }
+
+    // 3. COPIADO REAL AL PORTAPAPELES
+    const hasVariables = /{{(.*?)}}/.test(text);
+    if (hasVariables && typeof openSmartModal === 'function') {
         openSmartModal(text);
     } else {
-        copyToClipboardReal(text);
+        navigator.clipboard.writeText(text);
     }
 }
 
