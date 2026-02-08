@@ -167,14 +167,13 @@ function createNodeElement(node, filter, isFav = false) {
     if (node.color && node.type === 'folder') header.style.color = node.color;
     if (node.description) header.title = node.description;
 
-    // --- CIRUGÍA DE ICONOS V3 ---
+    // --- ICONOS V3 ---
     const iconSpan = document.createElement('span');
     iconSpan.style.marginRight = '8px';
     iconSpan.style.display = 'flex'; 
     iconSpan.style.alignItems = 'center';
 
     const collapsed = node.collapsed === true;
-
     const iconClosed = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
     const iconOpen = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><path d="M20 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path><path d="M3 13h19"></path></svg>`;
     const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
@@ -185,17 +184,13 @@ function createNodeElement(node, filter, isFav = false) {
         iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
     }
 
-// 1. PROCESAMIENTO DEL NOMBRE CON RESALTADO (HIGHLIGHT)
     const nameSpan = document.createElement('span');
     const nameText = node.name || "Untitled";
 
     if (filter && filter.trim() !== "") {
         try {
-            // Escapamos caracteres especiales para evitar errores de Regex
             const escapedFilter = filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(`(${escapedFilter})`, 'gi');
-            
-            // Inyectamos el span con la clase .search-highlight
             nameSpan.innerHTML = nameText.replace(regex, '<span class="search-highlight">$1</span>');
         } catch (e) {
             nameSpan.textContent = nameText;
@@ -204,37 +199,37 @@ function createNodeElement(node, filter, isFav = false) {
         nameSpan.textContent = nameText;
     }
 
-    // 2. CONSTRUCCIÓN DEL HEADER
     header.appendChild(iconSpan);
     header.appendChild(nameSpan);
 
-    // 3. PROCESAMIENTO DE TAGS (Manteniendo tu lógica actual)
     if (Array.isArray(node.tags) && node.tags.length > 0) {
         const tagsDiv = document.createElement('div');
         tagsDiv.style.marginLeft = 'auto';
         tagsDiv.style.display = 'flex';
         tagsDiv.style.gap = '4px';
-
         node.tags.forEach(t => {
             const badge = document.createElement('span');
             badge.className = 'tag-badge';
             badge.textContent = t;
-            
-            // Si el tag es 'precaution', aplicamos la clase especial
-            if (t.toLowerCase().trim() === 'precaution') {
-                badge.classList.add('precaution');
-            }
-            
+            if (t.toLowerCase().trim() === 'precaution') badge.classList.add('precaution');
             tagsDiv.appendChild(badge);
         });
         header.appendChild(tagsDiv);
     }
 
+    // --- CAMBIO 1: CLIC SIN RE-RENDERIZADO TOTAL (Para permitir animación) ---
     header.onclick = () => {
         if (node.type === 'folder' && !isFav) {
             node.collapsed = !node.collapsed;
             saveData();
-            refreshAll();
+            
+            // Toggle de clase visual para disparar la animación CSS
+            const content = wrapper.querySelector('.folder-content');
+            if (content) {
+                content.classList.toggle('collapsed', node.collapsed);
+                // Actualizamos el icono sin refrescar todo el árbol
+                iconSpan.innerHTML = node.collapsed ? iconClosed : iconOpen;
+            }
         }
     };
 
@@ -248,31 +243,25 @@ function createNodeElement(node, filter, isFav = false) {
 
     if (node.type === 'command') {
         const wrap = document.createElement('div');
-        wrap.className = 'cmd-wrapper copy-flash'; // <--- Etiqueta necesaria para el CSS
-        
+        wrap.className = 'cmd-wrapper copy-flash';
         const pre = document.createElement('pre');
         pre.className = node.expanded ? 'cmd-preview expanded' : 'cmd-preview';
         pre.innerHTML = highlightSyntax(String(node.cmd || ""));
-        pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap); // <--- Pasamos 'wrap'
+        pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap);
 
         const btn = document.createElement('div');
         btn.className = 'cmd-ctrl-btn';
-
-        // Iconos con pointer-events: none para asegurar que el clic llegue al div
         btn.innerHTML = node.expanded
-            ? `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
-            : `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+            ? `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
+            : `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
-        // MANEJO DE CLIC REFORZADO
         btn.onclick = (e) => {
-            e.preventDefault();  // Evita acciones por defecto
-            e.stopPropagation(); // DETIENE la propagación hacia el 'pre' (importante)
-            
+            e.preventDefault();
+            e.stopPropagation();
             node.expanded = !node.expanded;
             saveData();
             refreshAll();
         };
-
         wrap.appendChild(pre);
         wrap.appendChild(btn);
         row.appendChild(wrap);
@@ -281,21 +270,27 @@ function createNodeElement(node, filter, isFav = false) {
     const wrapper = document.createElement('div');
     wrapper.appendChild(row);
 
+    // --- CAMBIO 2: RENDERIZADO SIEMPRE (Oculto por CSS) ---
     if (!isFav && node.children && node.type === 'folder') {
-        if (!node.collapsed || filter) {
-            const inner = document.createElement('div');
-            inner.className = 'folder-content';
-            inner.style.borderLeft = "1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1))";
-            inner.style.marginLeft = "12px";
-            inner.style.paddingLeft = "8px";
-
-            node.children.forEach(child => {
-                if (child && isVisible(child, filter)) {
-                    inner.appendChild(createNodeElement(child, filter));
-                }
-            });
-            wrapper.appendChild(inner);
+        const inner = document.createElement('div');
+        inner.className = 'folder-content';
+        
+        // Si la carpeta está cerrada y no hay filtro, le ponemos la clase que el CSS anima
+        if (node.collapsed && !filter) {
+            inner.classList.add('collapsed');
         }
+
+        inner.style.borderLeft = "1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1))";
+        inner.style.marginLeft = "12px";
+        inner.style.paddingLeft = "8px";
+
+        // IMPORTANTE: Renderizamos los hijos siempre para que la transición de altura funcione
+        node.children.forEach(child => {
+            if (child && isVisible(child, filter)) {
+                inner.appendChild(createNodeElement(child, filter));
+            }
+        });
+        wrapper.appendChild(inner);
     }
     return wrapper;
 }

@@ -1407,3 +1407,29 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
         opacity: 0;
     }
 }
+
+/* --- ANIMACIÓN DE CARPETAS OPCIÓN A --- */
+
+.folder-content {
+    overflow: hidden !important;
+    /* Transición suave de altura y transparencia */
+    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
+    max-height: 1000px; /* Un valor alto para permitir el despliegue */
+    opacity: 1;
+}
+
+/* Estado cuando la carpeta está cerrada */
+.folder-content.collapsed {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Rotación del icono para dar feedback de apertura */
+.folder-icon-v3 {
+    transition: transform 0.2s ease !important;
+}
+
+.item-header.collapsed .folder-icon-v3 {
+    transform: rotate(-90deg);
+}
