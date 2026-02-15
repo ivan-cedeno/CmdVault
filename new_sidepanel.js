@@ -2,6 +2,26 @@ const FOLDER_COLORS = ['#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#
 
 const GIST_FILENAME = 'ivan_helper_backup.json';
 
+// --- SMART CLOUD TAGS ---
+const CLOUD_TAG_CONFIG = {
+    'aws': {
+        cssClass: 'cloud-aws',
+        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><path d="M8 16c1.5 1 3.5 1 5 0" stroke-width="1.5"></path></svg>`
+    },
+    'azure': {
+        cssClass: 'cloud-azure',
+        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><line x1="13" y1="11" x2="11" y2="17"></line><polyline points="9 14 11 17 13 14" stroke-width="1.5"></polyline></svg>`
+    },
+    'gcp': {
+        cssClass: 'cloud-gcp',
+        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="10 16 12 13 14 16" stroke-width="1.5"></polyline><line x1="12" y1="13" x2="12" y2="17" stroke-width="1.5"></line></svg>`
+    },
+    'all clouds': {
+        cssClass: 'cloud-all',
+        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>`
+    }
+};
+
 // --- ESTADO GLOBAL ---
 let treeData = [];
 let commandHistory = [];
@@ -16,6 +36,23 @@ let currentTheme = "theme-dark";
 let toastTimeout = null;
 let isDataLoaded = false;
 let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
+
+// --- URL DETECTION ---
+const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
+
+/**
+ * Detects URLs in a command string.
+ * @param {string} text - The command text to analyze.
+ * @returns {{ isPureUrl: boolean, urls: string[] }}
+ */
+function detectUrls(text) {
+    if (!text || typeof text !== 'string') return { isPureUrl: false, urls: [] };
+    const trimmed = text.trim();
+    const matches = trimmed.match(URL_REGEX);
+    if (!matches || matches.length === 0) return { isPureUrl: false, urls: [] };
+    const isPureUrl = matches.length === 1 && trimmed === matches[0];
+    return { isPureUrl, urls: matches };
+}
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -211,7 +248,12 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     if (node.type === 'folder') {
         iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
     } else {
-        iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
+        // Auto-detect pure URLs: show 🔗 icon when cmd is a URL and no custom icon is set
+        if ((!node.icon || node.icon === '⌨️') && detectUrls(node.cmd).isPureUrl) {
+            iconSpan.innerHTML = '🔗';
+        } else {
+            iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
+        }
     }
 
     const nameSpan = document.createElement('span');
@@ -240,8 +282,21 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         node.tags.forEach(t => {
             const badge = document.createElement('span');
             badge.className = 'tag-badge';
-            badge.textContent = t;
-            if (t.toLowerCase().trim() === 'precaution') badge.classList.add('precaution');
+
+            const normalizedTag = t.toLowerCase().trim();
+            const cloudConfig = CLOUD_TAG_CONFIG[normalizedTag];
+
+            if (cloudConfig) {
+                // Smart Cloud Tag: colored badge with SVG icon
+                badge.classList.add(cloudConfig.cssClass);
+                badge.innerHTML = `<span class="tag-icon">${cloudConfig.icon}</span>${t}`;
+            } else if (normalizedTag === 'precaution') {
+                badge.classList.add('precaution');
+                badge.textContent = t;
+            } else {
+                badge.textContent = t;
+            }
+
             tagsDiv.appendChild(badge);
         });
         header.appendChild(tagsDiv);
@@ -277,6 +332,23 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         pre.className = node.expanded ? 'cmd-preview expanded' : 'cmd-preview';
         pre.innerHTML = highlightSyntax(String(node.cmd || ""));
         pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap);
+
+        // URL Detection: Add "Open URL" button if URLs are found
+        const urlInfo = detectUrls(node.cmd);
+        if (urlInfo.urls.length > 0) {
+            const openBtn = document.createElement('div');
+            openBtn.className = 'cmd-open-url-btn';
+            openBtn.title = urlInfo.isPureUrl
+                ? 'Open URL in new tab'
+                : `Open URL in new tab (${urlInfo.urls.length} link${urlInfo.urls.length > 1 ? 's' : ''})`;
+            openBtn.innerHTML = `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+            openBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openUrlFromCommand(urlInfo.urls);
+            };
+            wrap.appendChild(openBtn);
+        }
 
         const btn = document.createElement('div');
         btn.className = 'cmd-ctrl-btn';
@@ -415,6 +487,14 @@ function setupAppEvents() {
             else if (id === 'ctx-collapse-all') { toggleFolderRecursively(contextTargetId, true); close(); }
 
             else if (id === 'ctx-pin-toggle') { togglePin(contextTargetId); close(); }
+            else if (id === 'ctx-open-url') {
+                const node = findNode(treeData, contextTargetId);
+                if (node) {
+                    const urlInfo = detectUrls(node.cmd);
+                    openUrlFromCommand(urlInfo.urls);
+                }
+                close();
+            }
             else if (id === 'ctx-delete') { if (confirm("Delete?")) execDelete(contextTargetId); close(); }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
@@ -1155,6 +1235,21 @@ function copyToClipboard(text, name = "Command", element = null) {
     }
 }
 
+/**
+ * Opens detected URLs in a new browser tab.
+ * @param {string[]} urls - Array of detected URLs.
+ */
+function openUrlFromCommand(urls) {
+    if (!urls || urls.length === 0) return;
+    if (urls.length === 1) {
+        chrome.tabs.create({ url: urls[0], active: true });
+        showToast('🔗 Opened in new tab');
+    } else {
+        chrome.tabs.create({ url: urls[0], active: true });
+        showToast(`🔗 Opened first URL (${urls.length} found)`);
+    }
+}
+
 function showToast(m) {
     const e = document.getElementById('status-msg');
     if (e) {
@@ -1224,8 +1319,20 @@ function openContextMenu(e, node) {
             pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
             pinBtn.style.display = 'flex';
         }
-        // Nota: Ya no necesitamos ocultar manualmente .icon-selector porque 
-        // el contenedor padre (ctx-cmd-section) ya está oculto.
+
+        // Configurar botón "Open URL" (solo si el comando contiene URLs)
+        const openUrlBtn = document.getElementById('ctx-open-url');
+        if (openUrlBtn) {
+            const urlInfo = detectUrls(node.cmd);
+            if (urlInfo.urls.length > 0) {
+                openUrlBtn.style.display = 'flex';
+                openUrlBtn.textContent = urlInfo.isPureUrl
+                    ? '🔗 Open URL'
+                    : `🔗 Open URL (${urlInfo.urls.length})`;
+            } else {
+                openUrlBtn.style.display = 'none';
+            }
+        }
     }
 
     // D. Opciones de Expandir/Colapsar (Solo carpetas)
