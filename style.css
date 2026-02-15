@@ -1458,3 +1458,130 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     transform: scale(1.3);
     border-color: white;
 }
+
+/* ==========================================================================
+   INLINE EDITING MODE (Modo Edicion Rapida)
+   ========================================================================== */
+
+.inline-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    animation: inlineEditFadeIn 0.2s ease-out;
+}
+
+.tree-item.inline-editing {
+    border: 2px solid var(--md-sys-color-primary) !important;
+    background: var(--md-sys-color-surface-container) !important;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 12px var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.15));
+}
+
+.inline-edit-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.inline-edit-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--md-sys-color-on-surface-variant);
+    padding-left: 2px;
+}
+
+.inline-edit-input {
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+}
+
+.inline-edit-input:focus {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 2px var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.15));
+}
+
+.inline-edit-input.inline-edit-cmd {
+    font-family: var(--font-code);
+    font-size: 12px;
+    resize: vertical;
+    min-height: 60px;
+    max-height: 150px;
+    line-height: 1.5;
+}
+
+.inline-edit-input.inline-edit-error {
+    border-color: var(--md-sys-color-error) !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+    animation: inlineEditShake 0.3s ease;
+}
+
+.inline-edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    justify-content: flex-end;
+}
+
+.inline-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+}
+
+.inline-edit-save {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+.inline-edit-save:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.inline-edit-cancel {
+    background-color: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline);
+}
+.inline-edit-cancel:hover {
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-error);
+    border-color: var(--md-sys-color-error);
+}
+
+@keyframes inlineEditFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes inlineEditShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+/* Light mode overrides */
+.theme-light .inline-edit-input {
+    background: rgba(255, 255, 255, 0.8);
+}
+.theme-light .tree-item.inline-editing {
+    background: rgba(255, 255, 255, 0.9) !important;
+}

@@ -15,6 +15,7 @@ let ghToken = "";
 let currentTheme = "theme-dark";
 let toastTimeout = null;
 let isDataLoaded = false;
+let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- CARGA DE DATOS ---
 function loadDataFromStorage() {
+    if (typeof cancelInlineEdit === 'function') cancelInlineEdit();
     chrome.storage.local.get(null, (items) => {
         if (chrome.runtime.lastError) {
             console.error("Storage Error:", chrome.runtime.lastError);
@@ -130,6 +132,7 @@ function updateHeaderIcons() {
 
 // --- RENDERIZADO ÁRBOL ---
 function renderTree(filter) {
+    if (inlineEditState) return; // Preserve inline editor during re-renders
     const container = document.getElementById('tree-container');
     if (!container) return;
 
@@ -153,6 +156,7 @@ function renderTree(filter) {
 function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     const row = document.createElement('div');
     row.className = `tree-item type-${node.type}`;
+    row.dataset.nodeId = node.id;
 
     if (appClipboard && appClipboard.action === 'cut' && String(appClipboard.id) === String(node.id)) {
         row.classList.add('cut-state');
@@ -234,6 +238,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     }
 
     header.onclick = () => {
+        if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
         if (node.type === 'folder' && !isFav) {
             node.collapsed = !node.collapsed;
             saveData();
@@ -247,6 +252,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
 
     header.oncontextmenu = (e) => {
         e.preventDefault();
+        if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
         contextTargetId = node.id;
         openContextMenu(e, node);
     };
@@ -280,6 +286,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     }
 
     const wrapper = document.createElement('div');
+    wrapper.dataset.nodeId = node.id;
     wrapper.appendChild(row);
 
     if (!isFav && node.children && node.type === 'folder') {
@@ -317,9 +324,18 @@ function setupAppEvents() {
     });
 
     bindClick('btn-add-root', () => {
-        const n = prompt("New Root Folder:");
-        if (n) {
-            addItemToTree(null, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: null });
+        cancelInlineEdit();
+
+        const newId = genId();
+        const tempNode = { id: newId, name: '', type: 'folder', children: [], collapsed: false, color: null };
+
+        treeData.push(tempNode);
+        inlineEditState = null;
+        refreshAll();
+
+        const domElement = findNodeDomElement(newId);
+        if (domElement) {
+            openInlineEditor(domElement, tempNode, 'add', null);
         }
     });
 
@@ -501,6 +517,7 @@ function attachDragEvents(row, node) {
     row.draggable = true;
 
     row.ondragstart = (e) => {
+        if (inlineEditState && String(inlineEditState.id) === String(node.id)) { e.preventDefault(); return; }
         draggedId = node.id;
         e.dataTransfer.effectAllowed = 'copyMove';
         e.dataTransfer.setData('text/plain', String(node.id));
@@ -658,102 +675,37 @@ function execDelete(id) {
 }
 
 function execAdd(parentId, type) {
-    if (type === 'folder') {
-        const n = prompt("Folder Name:");
-        // Nota: Aquí ya usa FOLDER_COLORS[0] que acabamos de cambiar a Perla
-        if (n) addItemToTree(parentId, { id: genId(), name: n, type: 'folder', children: [], collapsed: false, color: null });
-    } else {
-        // --- RESTAURACIÓN DE LA SECUENCIA DE PROMPTS DE V1 ---
+    cancelInlineEdit();
 
-        // 1. Nombre
-        const n = prompt("Name:");
-        if (!n) return; // Si cancela el nombre, abortamos igual que en V1
+    const newId = genId();
+    const tempNode = type === 'folder'
+        ? { id: newId, name: '', type: 'folder', children: [], collapsed: false, color: null }
+        : { id: newId, name: '', description: '', cmd: '', tags: [], type: 'command', icon: '⌨️', expanded: false };
 
-        // 2. Descripción (Faltaba en V2)
-        const d = prompt("Description:");
+    // Insert silently, then render to place it in the DOM
+    addItemToTreeSilent(parentId, tempNode);
+    // Temporarily clear state so refreshAll renders the tree
+    inlineEditState = null;
+    refreshAll();
 
-        // 3. Comando
-        const c = prompt("Command:");
+    // Find the newly rendered DOM element and open the editor
+    const domElement = findNodeDomElement(newId);
+    if (!domElement) return;
 
-        // 4. Tags (Faltaba en V2)
-        const t = prompt("Tags (comma separated):");
-
-        // Procesamiento de Tags (Lógica exacta de V1 para mantener compatibilidad CSS)
-        let tagsArray = [];
-        if (t) {
-            tagsArray = t.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
-        }
-
-        if (c) {
-            // Construimos el objeto completo con todas las propiedades
-            addItemToTree(parentId, {
-                id: genId(),
-                name: n,
-                description: d || "", // Guardamos descripción
-                cmd: c,
-                tags: tagsArray,      // Guardamos el array de tags para que se activen los badges
-                type: 'command',
-                icon: '⌨️',
-                expanded: false
-            });
-        }
-    }
+    openInlineEditor(domElement, tempNode, 'add', parentId);
 }
 
-/* --- FUNCIÓN DE EDICIÓN MEJORADA (V2 FIX) --- */
+/* --- FUNCIÓN DE EDICIÓN INLINE (Modo Edicion Rapida) --- */
 function execEdit(id) {
     const node = findNode(treeData, id);
     if (!node) return;
 
-    // CASO 1: Si es una CARPETA, solo editamos el nombre
-    if (node.type === 'folder') {
-        const n = prompt("Edit Folder Name:", node.name);
-        // Si el usuario da "Cancelar" (null) o lo deja vacío, no hacemos nada
-        if (n !== null && n.trim() !== "") {
-            node.name = n;
-            saveData();
-            refreshAll();
-        }
-        return;
-    }
+    cancelInlineEdit();
 
-    // CASO 2: Si es un COMANDO, editamos los 4 campos (Flujo de 4 pasos)
+    const domElement = findNodeDomElement(id);
+    if (!domElement) return;
 
-    // 1. Nombre (Obligatorio)
-    const n = prompt("Edit Name:", node.name);
-    if (n === null) return; // Si cancela, abortamos la edición
-
-    // 2. Descripción
-    const d = prompt("Edit Description:", node.description || "");
-    if (d === null) return;
-
-    // 3. Comando
-    const c = prompt("Edit Command:", node.cmd || "");
-    if (c === null) return;
-
-    // 4. Tags (Convertimos el array a texto para mostrarlo)
-    const currentTags = (node.tags || []).join(', ');
-    const t = prompt("Edit Tags (comma separated):", currentTags);
-    if (t === null) return;
-
-    // --- APLICAR CAMBIOS ---
-
-    // Validamos que el nombre no quede vacío
-    if (n.trim()) node.name = n;
-
-    node.description = d;
-    node.cmd = c;
-
-    // Procesar Tags (String -> Array)
-    let tagsArray = [];
-    if (t) {
-        tagsArray = t.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
-    }
-    node.tags = tagsArray;
-
-    // Guardar y Refrescar
-    saveData();
-    refreshAll();
+    openInlineEditor(domElement, node, 'edit', null);
 }
 
 // --- NEW RECURSIVE ACTIONS ---
@@ -850,6 +802,253 @@ function cloneNode(node) {
 function changeTheme(themeName) {
     document.body.className = themeName;
     currentTheme = themeName;
+}
+
+// ==========================================================================
+//  INLINE EDITING SYSTEM (Modo Edicion Rapida)
+// ==========================================================================
+
+function findNodeDomElement(id) {
+    return document.querySelector(`#tree-container [data-node-id="${id}"]`);
+}
+
+function addItemToTreeSilent(parentId, item) {
+    if (!parentId) {
+        treeData.push(item);
+    } else {
+        const parent = findNode(treeData, parentId);
+        if (parent) {
+            if (!parent.children) parent.children = [];
+            parent.children.push(item);
+            parent.collapsed = false;
+        }
+    }
+}
+
+function removeNodeById(id) {
+    const list = findParentList(treeData, id);
+    if (list) {
+        const idx = list.findIndex(n => String(n.id) === String(id));
+        if (idx !== -1) list.splice(idx, 1);
+    }
+}
+
+function createFieldGroup(label, tagName, className, value, placeholder) {
+    const group = document.createElement('div');
+    group.className = 'inline-edit-field-group';
+
+    const lbl = document.createElement('label');
+    lbl.className = 'inline-edit-label';
+    lbl.textContent = label;
+    group.appendChild(lbl);
+
+    const input = document.createElement(tagName);
+    input.className = `inline-edit-input ${className}`;
+    input.placeholder = placeholder;
+    input.value = value;
+
+    if (tagName === 'textarea') {
+        input.rows = 3;
+        input.style.fontFamily = 'var(--font-code)';
+    }
+
+    group.appendChild(input);
+    return group;
+}
+
+function buildInlineForm(node) {
+    const form = document.createElement('div');
+    form.className = 'inline-edit-form';
+
+    // NAME (always)
+    const nameGroup = createFieldGroup('Name', 'input', 'inline-edit-name', node.name || '', 'Enter name...');
+    form.appendChild(nameGroup);
+
+    if (node.type === 'command') {
+        // DESCRIPTION
+        const descGroup = createFieldGroup('Description', 'input', 'inline-edit-desc', node.description || '', 'Enter description...');
+        form.appendChild(descGroup);
+
+        // COMMAND (textarea)
+        const cmdGroup = createFieldGroup('Command', 'textarea', 'inline-edit-cmd', node.cmd || '', 'Enter command...');
+        form.appendChild(cmdGroup);
+
+        // TAGS
+        const tagsValue = Array.isArray(node.tags) ? node.tags.join(', ') : '';
+        const tagsGroup = createFieldGroup('Tags', 'input', 'inline-edit-tags', tagsValue, 'tag1, tag2, tag3...');
+        form.appendChild(tagsGroup);
+    }
+
+    // ACTION BUTTONS
+    const actions = document.createElement('div');
+    actions.className = 'inline-edit-actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'inline-edit-btn inline-edit-save';
+    saveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Save`;
+    saveBtn.onclick = (e) => { e.stopPropagation(); saveInlineEdit(); };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'inline-edit-btn inline-edit-cancel';
+    cancelBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancel`;
+    cancelBtn.onclick = (e) => { e.stopPropagation(); cancelInlineEdit(); };
+
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+    form.appendChild(actions);
+
+    // KEYBOARD HANDLING
+    form.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelInlineEdit();
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            // Textarea: Enter = newline, Ctrl+Enter = save
+            if (e.target.tagName === 'TEXTAREA' && !e.ctrlKey) return;
+
+            const inputs = form.querySelectorAll('input, textarea');
+            const lastInput = inputs[inputs.length - 1];
+
+            if (e.target === lastInput || e.ctrlKey) {
+                e.preventDefault();
+                saveInlineEdit();
+                return;
+            }
+
+            // Move to next field
+            e.preventDefault();
+            const idx = Array.from(inputs).indexOf(e.target);
+            if (idx >= 0 && idx < inputs.length - 1) {
+                inputs[idx + 1].focus();
+            }
+        }
+    });
+
+    // Prevent event propagation to tree
+    form.addEventListener('click', (e) => e.stopPropagation());
+    form.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); });
+
+    return form;
+}
+
+function openInlineEditor(domElement, node, mode, parentId) {
+    const originalSnapshot = JSON.parse(JSON.stringify(node));
+
+    const form = buildInlineForm(node);
+
+    inlineEditState = {
+        id: node.id,
+        mode: mode,
+        type: node.type,
+        parentId: parentId,
+        originalNode: mode === 'edit' ? originalSnapshot : null,
+        formElement: form
+    };
+
+    // Find the .tree-item row inside the wrapper
+    const treeItemRow = domElement.querySelector('.tree-item') || domElement;
+
+    // Hide existing content
+    const header = treeItemRow.querySelector('.item-header');
+    const cmdWrapper = treeItemRow.querySelector('.cmd-wrapper');
+    if (header) header.style.display = 'none';
+    if (cmdWrapper) cmdWrapper.style.display = 'none';
+
+    // Insert the form
+    treeItemRow.insertBefore(form, treeItemRow.firstChild);
+    treeItemRow.classList.add('inline-editing');
+    treeItemRow.draggable = false;
+
+    // Focus first input
+    const firstInput = form.querySelector('input, textarea');
+    if (firstInput) {
+        firstInput.focus();
+        if (mode === 'edit') firstInput.select();
+    }
+
+    // Scroll into view
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function saveInlineEdit() {
+    if (!inlineEditState) return;
+
+    const form = inlineEditState.formElement;
+    const node = findNode(treeData, inlineEditState.id);
+    if (!node) { cancelInlineEdit(); return; }
+
+    // Read name
+    const nameInput = form.querySelector('.inline-edit-name');
+    const name = nameInput ? nameInput.value.trim() : '';
+
+    // Validate: name required
+    if (!name) {
+        if (nameInput) {
+            nameInput.classList.add('inline-edit-error');
+            nameInput.focus();
+            setTimeout(() => nameInput.classList.remove('inline-edit-error'), 2000);
+        }
+        showToast('⚠️ Name is required');
+        return;
+    }
+
+    node.name = name;
+
+    if (node.type === 'command') {
+        const descInput = form.querySelector('.inline-edit-desc');
+        const cmdInput = form.querySelector('.inline-edit-cmd');
+        const tagsInput = form.querySelector('.inline-edit-tags');
+
+        node.description = descInput ? descInput.value : '';
+        node.cmd = cmdInput ? cmdInput.value : '';
+
+        // Process tags
+        const tagsStr = tagsInput ? tagsInput.value : '';
+        node.tags = tagsStr
+            ? tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0)
+            : [];
+
+        // For new commands, validate command field
+        if (inlineEditState.mode === 'add' && !node.cmd.trim()) {
+            if (cmdInput) {
+                cmdInput.classList.add('inline-edit-error');
+                cmdInput.focus();
+                setTimeout(() => cmdInput.classList.remove('inline-edit-error'), 2000);
+            }
+            showToast('⚠️ Command is required');
+            return;
+        }
+    }
+
+    const wasAdd = inlineEditState.mode === 'add';
+    inlineEditState = null;
+
+    saveData();
+    refreshAll();
+    showToast(wasAdd ? '✅ Created' : '✅ Saved');
+}
+
+function cancelInlineEdit() {
+    if (!inlineEditState) return;
+
+    const { id, mode, originalNode } = inlineEditState;
+
+    if (mode === 'add') {
+        removeNodeById(id);
+    } else if (mode === 'edit' && originalNode) {
+        const node = findNode(treeData, id);
+        if (node) {
+            Object.assign(node, originalNode);
+        }
+    }
+
+    inlineEditState = null;
+    refreshAll();
 }
 
 // ENTRADA MAESTRA: Redirige al sistema inteligente
@@ -1337,6 +1536,7 @@ async function uploadToGist(isRetry = false) {
 }
 
 async function downloadFromGist() {
+    cancelInlineEdit();
     if (!ghToken) return showToast("❌ Save GitHub Token first");
     showToast("📥 Downloading...");
 
