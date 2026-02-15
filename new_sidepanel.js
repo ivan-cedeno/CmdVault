@@ -198,6 +198,16 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     // Icono de Comando: Se mantiene el estilo de terminal alineado con los nuevos folders
     const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
 
+    // Chevron indicator for folders (> rotates to v when expanded)
+    let chevronSpan = null;
+    if (node.type === 'folder') {
+        chevronSpan = document.createElement('span');
+        chevronSpan.className = 'tree-chevron';
+        if (!collapsed || filter) chevronSpan.classList.add('expanded');
+        chevronSpan.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+        header.appendChild(chevronSpan);
+    }
+
     if (node.type === 'folder') {
         iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
     } else {
@@ -246,6 +256,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
             if (content) {
                 content.classList.toggle('collapsed', node.collapsed);
                 iconSpan.innerHTML = node.collapsed ? iconClosed : iconOpen;
+                if (chevronSpan) chevronSpan.classList.toggle('expanded', !node.collapsed);
             }
         }
     };

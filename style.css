@@ -1460,6 +1460,36 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 }
 
 /* ==========================================================================
+   TREE CHEVRON INDICATOR (> expand/collapse)
+   ========================================================================== */
+
+.tree-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 2px;
+    flex-shrink: 0;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.5;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.tree-chevron svg {
+    display: block;
+}
+
+.tree-chevron.expanded {
+    transform: rotate(90deg);
+}
+
+.item-header:hover .tree-chevron {
+    opacity: 1;
+    color: var(--md-sys-color-primary);
+}
+
+/* ==========================================================================
    INLINE EDITING MODE (Modo Edicion Rapida)
    ========================================================================== */
 
