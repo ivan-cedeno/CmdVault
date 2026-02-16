@@ -295,9 +295,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
 
     if (Array.isArray(node.tags) && node.tags.length > 0) {
         const tagsDiv = document.createElement('div');
-        tagsDiv.style.marginLeft = 'auto';
-        tagsDiv.style.display = 'flex';
-        tagsDiv.style.gap = '4px';
+        tagsDiv.className = 'tags-container';
         node.tags.forEach(t => {
             const badge = document.createElement('span');
             badge.className = 'tag-badge';
@@ -1116,11 +1114,19 @@ function saveInlineEdit() {
         node.description = descInput ? descInput.value : '';
         node.cmd = cmdInput ? cmdInput.value : '';
 
-        // Process tags
+        // Process tags (max 5 tags, 15 chars each)
         const tagsStr = tagsInput ? tagsInput.value : '';
-        node.tags = tagsStr
+        let parsedTags = tagsStr
             ? tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0)
             : [];
+
+        // Enforce limits
+        parsedTags = parsedTags.map(t => t.length > 15 ? t.substring(0, 15) : t);
+        if (parsedTags.length > 5) {
+            parsedTags = parsedTags.slice(0, 5);
+            showToast('⚠️ Max 5 tags allowed');
+        }
+        node.tags = parsedTags;
 
         // For new commands, validate command field
         if (inlineEditState.mode === 'add' && !node.cmd.trim()) {
