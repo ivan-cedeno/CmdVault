@@ -22,6 +22,22 @@ const CLOUD_TAG_CONFIG = {
     }
 };
 
+// --- ICON SVG MAP (Resolves short icon IDs to SVG strings at render time) ---
+const ICON_SVG_MAP = {
+    'cmd': `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`,
+    'txt': `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>`
+};
+
+/**
+ * Resolves an icon value to its SVG string or returns the original value.
+ * Handles: SVG IDs ('cmd', 'txt'), legacy emoji ('⌨️'), null/undefined, and plain emojis.
+ */
+function resolveIcon(iconValue) {
+    if (!iconValue || iconValue === '⌨️') return ICON_SVG_MAP['cmd'];
+    if (ICON_SVG_MAP[iconValue]) return ICON_SVG_MAP[iconValue];
+    return iconValue; // emoji or other value, returned as-is
+}
+
 // --- ESTADO GLOBAL ---
 let treeData = [];
 let commandHistory = [];
@@ -249,10 +265,11 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
     } else {
         // Auto-detect pure URLs: show 🔗 icon when cmd is a URL and no custom icon is set
-        if ((!node.icon || node.icon === '⌨️') && detectUrls(node.cmd).isPureUrl) {
+        const isDefaultIcon = !node.icon || node.icon === 'cmd' || node.icon === '⌨️';
+        if (isDefaultIcon && detectUrls(node.cmd).isPureUrl) {
             iconSpan.innerHTML = '🔗';
         } else {
-            iconSpan.innerHTML = node.icon ? node.icon : iconCmd;
+            iconSpan.innerHTML = resolveIcon(node.icon);
         }
     }
 
@@ -771,7 +788,7 @@ function execAdd(parentId, type) {
     const newId = genId();
     const tempNode = type === 'folder'
         ? { id: newId, name: '', type: 'folder', children: [], collapsed: false, color: null }
-        : { id: newId, name: '', description: '', cmd: '', tags: [], type: 'command', icon: '⌨️', expanded: false };
+        : { id: newId, name: '', description: '', cmd: '', tags: [], type: 'command', icon: 'cmd', expanded: false };
 
     // Insert silently, then render to place it in the DOM
     addItemToTreeSilent(parentId, tempNode);
