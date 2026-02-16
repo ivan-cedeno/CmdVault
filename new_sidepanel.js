@@ -1205,57 +1205,6 @@ function cancelInlineEdit() {
  * Versión V3.3: Restauración Forzada de Historial y Feedback Visual.
  */
 /**
- * Versión de Producción Final (Fix Historial): Feedback Visual + Persistencia Garantizada.
- */
-/**
- * Versión Consolidada (Historial V1 + Estética V3)
- * Restaura la actualización inmediata de LAST USED y mantiene el flash temático.
- */
-function copyToClipboard(text, name = "Command", element = null) {
-    // LOG DE IMPACTO: Si no ves esto, el problema es el Paso 2 (abajo)
-    console.log("⚡ EJECUTANDO COPIADO PARA:", name);
-
-    if (!text) return;
-
-    // 1. FEEDBACK VISUAL (Estética V3)
-    if (element) {
-        element.classList.add('active');
-        setTimeout(() => element.classList.remove('active'), 200);
-        const btn = element.querySelector('.cmd-ctrl-btn') || element.querySelector('button');
-        if (btn) {
-            const old = btn.innerHTML;
-            btn.innerHTML = '✅';
-            setTimeout(() => { btn.innerHTML = old; }, 1000);
-        }
-    }
-
-    // 2. LÓGICA DE HISTORIAL (Formato V1: Solo Strings)
-    if (typeof commandHistory !== 'undefined') {
-        // En V1 el historial guarda solo el texto (string)
-        commandHistory = commandHistory.filter(c => c !== text);
-        commandHistory.unshift(text);
-
-        if (commandHistory.length > 15) commandHistory.pop();
-
-        // Persistencia exacta a la V1
-        chrome.storage.local.set({ linuxHistory: commandHistory }, () => {
-            console.log("💾 Storage actualizado:", commandHistory);
-            if (typeof renderHistory === 'function') {
-                renderHistory(); // Esta función de la V1 ahora sí entenderá los datos
-            }
-        });
-    }
-
-    // 3. COPIADO Y VARIABLES
-    const hasVariables = /{{(.*?)}}/.test(text);
-    if (hasVariables && typeof openSmartModal === 'function') {
-        openSmartModal(text);
-    } else {
-        navigator.clipboard.writeText(text);
-    }
-}
-
-/**
  * Opens detected URLs in a new browser tab.
  * @param {string[]} urls - Array of detected URLs.
  */
@@ -1770,43 +1719,45 @@ document.addEventListener('DOMContentLoaded', () => {
 function copyToClipboard(text, name = "Command", element = null) {
     if (!text) return;
 
-    // 1. FEEDBACK VISUAL (Flash y Checkmark)
+    // 1. FEEDBACK VISUAL — Green Flash + SVG Animated Checkmark
     if (element) {
         try {
+            // Flash verde en el comando
             element.classList.add('active');
             setTimeout(() => element.classList.remove('active'), 200);
 
+            // SVG Animated Checkmark en el botón
             const btn = element.querySelector('.cmd-ctrl-btn');
-            if (btn) {
-                const old = btn.innerHTML;
-                btn.innerHTML = '✅';
-                btn.style.color = '#22c55e';
+            if (btn && !btn.querySelector('.copy-check-svg')) {
+                const oldHTML = btn.innerHTML;
+                btn.innerHTML = `<svg class="copy-check-svg" viewBox="0 0 24 24" width="18" height="18">
+                    <circle class="copy-check-circle" cx="12" cy="12" r="10"
+                        fill="none" stroke="var(--md-sys-color-primary)" stroke-width="2"/>
+                    <polyline class="copy-check-mark" points="7 12 10.5 15.5 17 9"
+                        fill="none" stroke="#22c55e" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>`;
 
                 setTimeout(() => {
-                    btn.innerHTML = old;
-                    btn.style.color = '';
-                }, 1000);
+                    btn.innerHTML = oldHTML;
+                }, 1200);
             }
         } catch (e) { /* Error visual silencioso */ }
     }
 
     // 2. LÓGICA DE HISTORIAL (Límite subido a 10)
     if (typeof commandHistory !== 'undefined') {
-        // Filtrar duplicados para mover el comando actual al principio
         commandHistory = commandHistory.filter(item => {
             const cmdText = typeof item === 'string' ? item : item.cmd;
             return cmdText !== text;
         });
 
-        // Insertar el objeto con Nombre y Comando
         commandHistory.unshift({ cmd: text, name: name });
 
-        // --- AJUSTE QUIRÚRGICO: Límite de 10 comandos ---
         if (commandHistory.length > 10) {
             commandHistory.pop();
         }
 
-        // Persistencia en Chrome Storage
         chrome.storage.local.set({ linuxHistory: commandHistory }, () => {
             if (typeof renderHistory === 'function') {
                 renderHistory();

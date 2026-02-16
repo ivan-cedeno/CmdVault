@@ -1290,24 +1290,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
 }
 
-/* --- AJUSTE DE COLOR DE FLASH PARA TEMA CLARO --- */
-
-.theme-light .copy-flash::after,
-.light-mode .copy-flash::after {
-    /* Usamos un Dorado/Ámbar para que destaque sobre el fondo blanco */
-    background: #ffb900 !important; 
-    
-    /* En modo claro, un destello un poco más denso ayuda a la visibilidad */
-    opacity: 0 !important;
-}
-
-.theme-light .copy-flash.active::after,
-.light-mode .copy-flash.active::after {
-    /* Opacidad de confirmación para el modo claro */
-    opacity: 0.4 !important; 
-}
-
-
 
 /* BADGE ESPECIAL: PRECAUTION */
 .tag-badge.precaution {
@@ -1389,88 +1371,65 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     box-shadow: 0 0 10px rgba(156, 39, 176, 0.4);
 }
 
-/* --- REFINAMIENTO V3: FLASH DE ALTA VISIBILIDAD --- */
+/* ==========================================================================
+   COPY FEEDBACK — Green Flash + SVG Animated Checkmark
+   ========================================================================== */
 
+/* Flash verde al copiar */
 .copy-flash {
     position: relative !important;
-    /* Asegura que nada se salga del contenedor durante el brillo */
-    overflow: hidden !important; 
+    overflow: hidden !important;
 }
-
-/* --- FIX DE VISIBILIDAD DE FLASH V3 --- */
 
 .copy-flash::after {
     content: '' !important;
     position: absolute !important;
     top: 0; left: 0; right: 0; bottom: 0;
-    
-    /* VERDE ESMERALDA FORZADO */
-    background: #22c55e !important; 
-    
+    background: #22c55e !important;
     opacity: 0 !important;
     pointer-events: none !important;
-    
-    /* POR ENCIMA DE TODO: Texto e iconos */
-    z-index: 999999 !important; 
-    
+    z-index: 999999 !important;
     transition: opacity 0.4s ease-out !important;
 }
 
 .copy-flash.active::after {
-    /* Opacidad alta para confirmar que funciona */
-    opacity: 0.6 !important; 
+    opacity: 0.6 !important;
     transition: none !important;
 }
 
-
-
-
-/* --- EFECTO DE ÉXITO: ICONO CHECKMARK --- */
-
-/* Suaviza la transición cuando el icono cambie */
+/* Smooth transition for the ctrl button icon swap */
 .cmd-ctrl-btn {
-    transition: all 0.2s ease-in-out !important;
+    transition: opacity 0.15s ease-in-out;
 }
 
-/* --- MEJORA VISUAL DEL CHECKMARK (Surgical Fix) --- */
-
-/* --- EFECTO "SUCCESS PULSE" V2 (Surgical & Professional) --- */
-
-.copy-success {
-    color: #22c55e !important;
-    display: inline-block !important;
-    position: relative !important;
-    z-index: 1000000 !important;
-    
-    /* Efecto Pop + Rotación ligera (5 grados) para dinamismo */
-    transform: scale(1.7) rotate(5deg) !important;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+/* --- SVG Animated Checkmark --- */
+.copy-check-svg {
+    animation: checkFadeIn 0.25s ease-out;
 }
 
-/* El Anillo de Pulso (Pseudo-elemento) */
-.copy-success::after {
-    content: '' !important;
-    position: absolute !important;
-    top: 50%; left: 50%;
-    width: 20px; height: 20px;
-    background: rgba(34, 197, 94, 0.6) !important;
-    border-radius: 50% !important;
-    transform: translate(-50%, -50%) scale(0);
-    
-    /* Disparamos la animación del anillo */
-    animation: success-ripple 0.6s ease-out forwards !important;
-    pointer-events: none !important;
+.copy-check-circle {
+    stroke-dasharray: 63;
+    stroke-dashoffset: 63;
+    animation: drawCircle 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-@keyframes success-ripple {
-    0% {
-        transform: translate(-50%, -50%) scale(0.5);
-        opacity: 0.8;
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(2.5);
-        opacity: 0;
-    }
+.copy-check-mark {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    animation: drawCheck 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+}
+
+@keyframes drawCircle {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes checkFadeIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
 /* --- ANIMACIÓN DE CARPETAS OPCIÓN A --- */
