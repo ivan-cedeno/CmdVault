@@ -52,6 +52,7 @@ let currentTheme = "theme-dark";
 let toastTimeout = null;
 let isDataLoaded = false;
 let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
+let helpPageState = null; // { nodeId, isEditing }
 
 // --- URL DETECTION ---
 const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
@@ -78,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupAppEvents();
         setupDocking();
         renderColorPalette(); // <--- ✅ CORRECCIÓN: Usar el nombre real de la función
+        setupHelpPageEvents();
     } catch (e) { console.error("UI Init Error:", e); }
     loadDataFromStorage();
 });
@@ -512,6 +514,7 @@ function setupAppEvents() {
                 }
                 close();
             }
+            else if (id === 'ctx-help-page') { openHelpPage(contextTargetId); close(); }
             else if (id === 'ctx-delete') { if (confirm("Delete?")) execDelete(contextTargetId); close(); }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
@@ -1920,6 +1923,337 @@ async function copyToClipboardReal(text) {
         }
     } catch (err) {
         alert("Error al copiar: " + err);
+    }
+}
+
+// ==========================================================================
+// HELP PAGE SYSTEM (Man Page / Documentation per Command)
+// ==========================================================================
+
+function openHelpPage(nodeId) {
+    const node = findNode(treeData, nodeId);
+    if (!node || node.type !== 'command') return;
+
+    // Initialize fields if they don't exist
+    if (typeof node.helpContent === 'undefined') node.helpContent = '';
+    if (typeof node.helpLang === 'undefined') node.helpLang = 'shell';
+
+    helpPageState = { nodeId, isEditing: false };
+
+    const overlay = document.getElementById('help-page-overlay');
+    const title = document.getElementById('help-page-title');
+    const langSel = document.getElementById('help-lang-selector');
+    const editArea = document.getElementById('help-content-edit');
+    const viewArea = document.getElementById('help-content-view');
+    const btnSave = document.getElementById('help-btn-save');
+    const btnEdit = document.getElementById('help-btn-edit');
+
+    title.textContent = `Help Page — ${node.name}`;
+    langSel.value = node.helpLang;
+
+    // Start in view mode
+    editArea.classList.add('hidden');
+    viewArea.classList.remove('hidden');
+    btnSave.classList.add('hidden');
+    btnEdit.textContent = '✏️ Edit';
+
+    renderHelpView();
+    overlay.classList.remove('hidden');
+}
+
+function closeHelpPage() {
+    const overlay = document.getElementById('help-page-overlay');
+    overlay.classList.add('hidden');
+    helpPageState = null;
+}
+
+function toggleHelpEdit() {
+    if (!helpPageState) return;
+    const node = findNode(treeData, helpPageState.nodeId);
+    if (!node) return;
+
+    const editArea = document.getElementById('help-content-edit');
+    const viewArea = document.getElementById('help-content-view');
+    const btnSave = document.getElementById('help-btn-save');
+    const btnEdit = document.getElementById('help-btn-edit');
+
+    if (!helpPageState.isEditing) {
+        // Switch to edit mode
+        helpPageState.isEditing = true;
+        editArea.value = node.helpContent || '';
+        editArea.classList.remove('hidden');
+        viewArea.classList.add('hidden');
+        btnSave.classList.remove('hidden');
+        btnEdit.textContent = '👁 View';
+        updateHelpLineNumbers(editArea.value);
+        editArea.focus();
+        updateHelpPositionIndicator();
+    } else {
+        // Switch to view mode
+        helpPageState.isEditing = false;
+        editArea.classList.add('hidden');
+        viewArea.classList.remove('hidden');
+        btnSave.classList.add('hidden');
+        btnEdit.textContent = '✏️ Edit';
+        renderHelpView();
+    }
+}
+
+function saveHelpPage() {
+    if (!helpPageState) return;
+    const node = findNode(treeData, helpPageState.nodeId);
+    if (!node) return;
+
+    const editArea = document.getElementById('help-content-edit');
+    const langSel = document.getElementById('help-lang-selector');
+
+    node.helpContent = editArea.value;
+    node.helpLang = langSel.value;
+    saveData();
+
+    showToast('💾 Help page saved');
+
+    // Switch to view mode after saving
+    helpPageState.isEditing = false;
+    editArea.classList.add('hidden');
+    document.getElementById('help-content-view').classList.remove('hidden');
+    document.getElementById('help-btn-save').classList.add('hidden');
+    document.getElementById('help-btn-edit').textContent = '✏️ Edit';
+    renderHelpView();
+}
+
+function renderHelpView() {
+    if (!helpPageState) return;
+    const node = findNode(treeData, helpPageState.nodeId);
+    if (!node) return;
+
+    const viewArea = document.getElementById('help-content-view');
+    const content = node.helpContent || '';
+    const lang = node.helpLang || 'shell';
+
+    if (!content.trim()) {
+        viewArea.innerHTML = '<span style="opacity:0.4; font-style:italic;">No help page content. Click "Edit" to add documentation.</span>';
+    } else {
+        viewArea.innerHTML = highlightHelpContent(content, lang);
+    }
+
+    updateHelpLineNumbers(content);
+    updateHelpPositionIndicator();
+}
+
+function updateHelpLineNumbers(text) {
+    const lineNumEl = document.getElementById('help-line-numbers');
+    if (!lineNumEl) return;
+
+    const lines = (text || '').split('\n');
+    const count = Math.max(lines.length, 1);
+    let html = '';
+    for (let i = 1; i <= count; i++) {
+        html += `<div>${i}</div>`;
+    }
+    lineNumEl.innerHTML = html;
+}
+
+function updateHelpPositionIndicator() {
+    const indicator = document.getElementById('help-position-indicator');
+    if (!indicator) return;
+
+    if (helpPageState && helpPageState.isEditing) {
+        const editArea = document.getElementById('help-content-edit');
+        if (editArea) {
+            const pos = editArea.selectionStart || 0;
+            const textBefore = editArea.value.substring(0, pos);
+            const line = textBefore.split('\n').length;
+            const col = pos - textBefore.lastIndexOf('\n');
+            indicator.textContent = `Ln ${line} / Col ${col}`;
+        }
+    } else {
+        const node = helpPageState ? findNode(treeData, helpPageState.nodeId) : null;
+        const content = node ? (node.helpContent || '') : '';
+        const totalLines = content ? content.split('\n').length : 0;
+        indicator.textContent = totalLines > 0 ? `${totalLines} lines` : 'Empty';
+    }
+}
+
+function toggleHelpWordWrap() {
+    const editorArea = document.querySelector('.help-page-editor-area');
+    const btn = document.getElementById('help-wrap-toggle');
+    if (!editorArea) return;
+
+    editorArea.classList.toggle('word-wrap');
+    const isWrapped = editorArea.classList.contains('word-wrap');
+    btn.classList.toggle('active', isWrapped);
+}
+
+// --- SYNTAX HIGHLIGHTING PER LANGUAGE ---
+
+function highlightHelpContent(text, lang) {
+    // Escape HTML first
+    const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    switch (lang) {
+        case 'shell': return highlightShell(escaped);
+        case 'python': return highlightPython(escaped);
+        case 'sql': return highlightSQL(escaped);
+        case 'markdown': return highlightMarkdown(escaped);
+        default: return escaped;
+    }
+}
+
+function highlightShell(text) {
+    // Token-based approach: replace with placeholders, then restore
+    const tokens = [];
+    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return `\x00${i}\x00`; };
+
+    // 1. Strings
+    let result = text.replace(/"[^"]*"|'[^']*'/g, m => ph(m, 'hp-string'));
+    // 2. Comments
+    result = result.replace(/#.*/g, m => ph(m, 'hp-comment'));
+    // 3. Variables
+    result = result.replace(/\$\{[^}]+\}|\$\w+/g, m => ph(m, 'hp-variable'));
+    // 4. Keywords
+    result = result.replace(/\b(if|then|else|fi|for|do|done|while|case|esac|function|return|exit|echo|export|source|alias|sudo|cd|ls|grep|awk|sed|cat|mkdir|rm|cp|mv|chmod|chown|curl|wget|ssh|docker|kubectl|az|aws|gcloud|apt|yum|pip|npm|git|systemctl|journalctl|tar|zip|unzip|find|xargs|sort|uniq|wc|head|tail|tee|nohup|cron|crontab)\b/g, m => ph(m, 'hp-keyword'));
+    // 5. Flags
+    result = result.replace(/(\s)(-[\w-]+)/g, (m, sp, flag) => sp + ph(flag, 'hp-flag'));
+    // 6. Pipes/redirects
+    result = result.replace(/[|&]{1,2}|[><]+|;/g, m => ph(m, 'hp-operator'));
+
+    // Restore tokens
+    result = result.replace(/\x00(\d+)\x00/g, (_, i) => tokens[i]);
+    return result;
+}
+
+function highlightPython(text) {
+    const tokens = [];
+    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return `\x00${i}\x00`; };
+
+    // 1. Triple-quoted strings
+    let result = text.replace(/"""[\s\S]*?"""|'''[\s\S]*?'''/g, m => ph(m, 'hp-string'));
+    // 2. Regular strings
+    result = result.replace(/"[^"]*"|'[^']*'/g, m => ph(m, 'hp-string'));
+    // 3. Comments
+    result = result.replace(/#.*/g, m => ph(m, 'hp-comment'));
+    // 4. Decorators
+    result = result.replace(/@\w+/g, m => ph(m, 'hp-decorator'));
+    // 5. Keywords
+    result = result.replace(/\b(def|class|if|elif|else|for|while|try|except|finally|with|as|import|from|return|yield|lambda|and|or|not|in|is|True|False|None|print|range|len|self|pass|break|continue|raise|global|nonlocal|del|assert)\b/g, m => ph(m, 'hp-keyword'));
+    // 6. Numbers
+    result = result.replace(/\b\d+\.?\d*\b/g, m => ph(m, 'hp-number'));
+
+    result = result.replace(/\x00(\d+)\x00/g, (_, i) => tokens[i]);
+    return result;
+}
+
+function highlightSQL(text) {
+    const tokens = [];
+    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return `\x00${i}\x00`; };
+
+    // 1. Strings
+    let result = text.replace(/'[^']*'/g, m => ph(m, 'hp-string'));
+    // 2. Block comments
+    result = result.replace(/\/\*[\s\S]*?\*\//g, m => ph(m, 'hp-comment'));
+    // 3. Line comments
+    result = result.replace(/--.*$/gm, m => ph(m, 'hp-comment'));
+    // 4. Keywords (case-insensitive)
+    result = result.replace(/\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TABLE|INDEX|VIEW|DATABASE|SCHEMA|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|FULL|ON|AND|OR|NOT|IN|IS|NULL|AS|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|UNION|ALL|SET|VALUES|INTO|DISTINCT|COUNT|SUM|AVG|MAX|MIN|BETWEEN|LIKE|EXISTS|CASE|WHEN|THEN|ELSE|END|BEGIN|COMMIT|ROLLBACK|GRANT|REVOKE|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|TRUNCATE|EXEC|EXECUTE|DECLARE|FETCH|CURSOR|OPEN|CLOSE|IF|WHILE|RETURN|TOP|ASC|DESC|WITH|RECURSIVE|OVER|PARTITION|ROW_NUMBER|RANK|DENSE_RANK|LEAD|LAG|COALESCE|CAST|CONVERT|DATEADD|DATEDIFF|GETDATE|NOW|CURRENT_TIMESTAMP)\b/gi, m => ph(m, 'hp-keyword'));
+    // 5. Numbers
+    result = result.replace(/\b\d+\.?\d*\b/g, m => ph(m, 'hp-number'));
+
+    result = result.replace(/\x00(\d+)\x00/g, (_, i) => tokens[i]);
+    return result;
+}
+
+function highlightMarkdown(text) {
+    const tokens = [];
+    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return `\x00${i}\x00`; };
+
+    // 1. Code blocks (fenced)
+    let result = text.replace(/```[\s\S]*?```/g, m => ph(m, 'hp-codeblock'));
+    // 2. Inline code
+    result = result.replace(/`[^`]+`/g, m => ph(m, 'hp-code'));
+    // 3. Headers
+    result = result.replace(/^#{1,6}\s.*/gm, m => ph(m, 'hp-heading'));
+    // 4. Bold
+    result = result.replace(/\*\*[^*]+\*\*/g, m => ph(m, 'hp-bold'));
+    // 5. Italic
+    result = result.replace(/\*[^*]+\*/g, m => ph(m, 'hp-italic'));
+    // 6. Links
+    result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, m => ph(m, 'hp-link'));
+    // 7. List markers
+    result = result.replace(/^(\s*[-*+]\s)/gm, m => ph(m, 'hp-list'));
+
+    result = result.replace(/\x00(\d+)\x00/g, (_, i) => tokens[i]);
+    return result;
+}
+
+// --- HELP PAGE EVENT SETUP ---
+
+function setupHelpPageEvents() {
+    const btnEdit = document.getElementById('help-btn-edit');
+    const btnSave = document.getElementById('help-btn-save');
+    const btnClose = document.getElementById('help-btn-close');
+    const langSel = document.getElementById('help-lang-selector');
+    const wrapBtn = document.getElementById('help-wrap-toggle');
+    const editArea = document.getElementById('help-content-edit');
+    const viewArea = document.getElementById('help-content-view');
+    const lineNums = document.getElementById('help-line-numbers');
+    const overlay = document.getElementById('help-page-overlay');
+
+    if (btnEdit) btnEdit.onclick = () => toggleHelpEdit();
+    if (btnSave) btnSave.onclick = () => saveHelpPage();
+    if (btnClose) btnClose.onclick = () => closeHelpPage();
+    if (wrapBtn) wrapBtn.onclick = () => toggleHelpWordWrap();
+
+    if (langSel) langSel.onchange = () => {
+        if (!helpPageState) return;
+        const node = findNode(treeData, helpPageState.nodeId);
+        if (node) {
+            node.helpLang = langSel.value;
+            if (!helpPageState.isEditing) renderHelpView();
+        }
+    };
+
+    // Scroll sync: editor ↔ line numbers
+    if (editArea) {
+        editArea.onscroll = () => {
+            if (lineNums) lineNums.scrollTop = editArea.scrollTop;
+        };
+        editArea.oninput = () => {
+            updateHelpLineNumbers(editArea.value);
+            updateHelpPositionIndicator();
+        };
+        editArea.onkeyup = () => updateHelpPositionIndicator();
+        editArea.onclick = () => updateHelpPositionIndicator();
+        // Support Tab key in textarea
+        editArea.onkeydown = (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editArea.selectionStart;
+                const end = editArea.selectionEnd;
+                editArea.value = editArea.value.substring(0, start) + '    ' + editArea.value.substring(end);
+                editArea.selectionStart = editArea.selectionEnd = start + 4;
+                updateHelpLineNumbers(editArea.value);
+            }
+        };
+    }
+
+    // Scroll sync: view ↔ line numbers
+    if (viewArea) {
+        viewArea.onscroll = () => {
+            if (lineNums) lineNums.scrollTop = viewArea.scrollTop;
+        };
+    }
+
+    // Escape to close
+    if (overlay) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && helpPageState) {
+                closeHelpPage();
+            }
+        });
     }
 }
 

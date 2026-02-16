@@ -134,6 +134,7 @@
 
             <div class="ctx-item" id="ctx-pin-toggle">📌 Pin / Unpin</div>
             <div class="ctx-item" id="ctx-open-url" style="display:none">🔗 Open URL</div>
+            <div class="ctx-item" id="ctx-help-page">📖 Help Page</div>
         </div>
 
         <hr class="ctx-hr">
@@ -239,6 +240,35 @@
             <div class="modal-actions">
                 <button id="btn-confirm-dynamic" class="btn-primary-modal">Copy Command</button>
                 <button id="btn-cancel-dynamic" class="btn-secondary-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HELP PAGE OVERLAY -->
+    <div id="help-page-overlay" class="help-page-overlay hidden">
+        <div class="help-page-container">
+            <div class="help-page-header">
+                <h3 id="help-page-title" style="margin:0; font-size:14px; font-weight:600; color:var(--md-sys-color-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60%;">Help Page</h3>
+                <div class="help-page-controls">
+                    <select id="help-lang-selector">
+                        <option value="shell">Shell</option>
+                        <option value="python">Python</option>
+                        <option value="sql">SQL</option>
+                        <option value="markdown">Markdown</option>
+                    </select>
+                    <button id="help-wrap-toggle" class="help-toggle-btn" title="Toggle Word Wrap">Wrap</button>
+                </div>
+            </div>
+            <div class="help-page-editor-area">
+                <div id="help-line-numbers" class="help-line-numbers"><div>1</div></div>
+                <pre id="help-content-view" class="help-content-view"></pre>
+                <textarea id="help-content-edit" class="help-content-edit hidden" spellcheck="false" placeholder="Write your help page / man page here..."></textarea>
+            </div>
+            <div class="help-page-footer">
+                <span id="help-position-indicator" class="help-position-indicator">Ln 1 / Col 1</span>
+                <button id="help-btn-edit" class="btn-secondary-modal">✏️ Edit</button>
+                <button id="help-btn-save" class="btn-primary-modal hidden">💾 Save</button>
+                <button id="help-btn-close" class="btn-secondary-modal">✖ Close</button>
             </div>
         </div>
     </div>

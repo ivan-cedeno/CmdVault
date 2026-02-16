@@ -1732,3 +1732,231 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .theme-light .tree-item.inline-editing {
     background: rgba(255, 255, 255, 0.9) !important;
 }
+
+/* ==========================================================================
+   HELP PAGE OVERLAY (Man Page / Documentation)
+   ========================================================================== */
+
+.help-page-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: var(--md-sys-color-surface);
+    display: flex;
+    flex-direction: column;
+}
+
+.help-page-overlay.hidden {
+    display: none !important;
+}
+
+.help-page-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 16px;
+    gap: 12px;
+    overflow: hidden;
+}
+
+/* --- Header --- */
+.help-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.help-page-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+#help-lang-selector {
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+#help-lang-selector:focus {
+    border-color: var(--md-sys-color-primary);
+}
+
+.help-toggle-btn {
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.help-toggle-btn:hover {
+    background: var(--md-sys-color-surface-container-high);
+}
+
+.help-toggle-btn.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+}
+
+/* --- Editor Area --- */
+.help-page-editor-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 8px;
+    background: var(--md-sys-color-surface-container, rgba(0,0,0,0.15));
+    min-height: 0;
+}
+
+/* Line Numbers Gutter */
+.help-line-numbers {
+    width: 44px;
+    background: var(--md-sys-color-surface-container, rgba(0,0,0,0.2));
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px 8px 12px 0;
+    text-align: right;
+    overflow: hidden;
+    user-select: none;
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.help-line-numbers div {
+    padding-right: 4px;
+}
+
+/* Content View (read-only with syntax highlighting) */
+.help-content-view {
+    flex: 1;
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    margin: 0;
+    overflow: auto;
+    white-space: pre;
+    tab-size: 4;
+    color: var(--md-sys-color-on-surface);
+    background: transparent;
+    min-height: 0;
+}
+
+/* Content Edit (textarea) */
+.help-content-edit {
+    flex: 1;
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    margin: 0;
+    resize: none;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface);
+    overflow: auto;
+    white-space: pre;
+    tab-size: 4;
+    outline: none;
+    min-height: 0;
+}
+
+.help-content-edit::placeholder {
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.4;
+    font-style: italic;
+}
+
+/* Word Wrap Mode */
+.help-page-editor-area.word-wrap .help-content-view,
+.help-page-editor-area.word-wrap .help-content-edit {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: hidden;
+}
+
+/* --- Footer --- */
+.help-page-footer {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.help-position-indicator {
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    margin-right: auto;
+    opacity: 0.6;
+}
+
+.help-page-footer .btn-primary-modal,
+.help-page-footer .btn-secondary-modal {
+    flex: none;
+    padding: 8px 16px;
+    font-size: 12px;
+}
+
+/* ==========================================================================
+   HELP PAGE SYNTAX HIGHLIGHTING TOKENS
+   ========================================================================== */
+
+.hp-keyword   { color: #c678dd; font-weight: 600; }
+.hp-string    { color: #98c379; }
+.hp-comment   { color: #5c6370; font-style: italic; }
+.hp-number    { color: #d19a66; }
+.hp-flag      { color: #61afef; font-style: italic; }
+.hp-variable  { color: #e06c75; }
+.hp-operator  { color: #56b6c2; font-weight: 600; }
+.hp-decorator { color: #e5c07b; }
+
+/* Markdown-specific tokens */
+.hp-heading   { color: #e5c07b; font-weight: 700; }
+.hp-bold      { font-weight: 700; color: inherit; }
+.hp-italic    { font-style: italic; color: inherit; }
+.hp-code      { background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px; color: #e06c75; }
+.hp-codeblock { background: rgba(0,0,0,0.25); display: block; padding: 8px; border-radius: 4px; margin: 4px 0; }
+.hp-link      { color: #61afef; text-decoration: underline; }
+.hp-list      { color: #56b6c2; font-weight: 600; }
+
+/* Light theme overrides for syntax tokens */
+.theme-light .hp-keyword   { color: #7c3aed; }
+.theme-light .hp-string    { color: #16a34a; }
+.theme-light .hp-comment   { color: #9ca3af; }
+.theme-light .hp-number    { color: #b45309; }
+.theme-light .hp-flag      { color: #2563eb; }
+.theme-light .hp-variable  { color: #dc2626; }
+.theme-light .hp-operator  { color: #0891b2; }
+.theme-light .hp-heading   { color: #b45309; }
+.theme-light .hp-code      { background: rgba(0,0,0,0.06); color: #dc2626; }
+.theme-light .hp-codeblock { background: rgba(0,0,0,0.05); }
+.theme-light .hp-link      { color: #2563eb; }
+
+/* Hacker theme overrides */
+.theme-hacker .hp-keyword  { color: #0f0; }
+.theme-hacker .hp-string   { color: #7fff7f; }
+.theme-hacker .hp-comment  { color: #4a7a4a; }
