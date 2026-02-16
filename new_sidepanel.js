@@ -371,9 +371,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
 
         const btn = document.createElement('div');
         btn.className = 'cmd-ctrl-btn';
-        btn.innerHTML = node.expanded
-            ? `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
-            : `<svg class="folder-icon-v3" style="width:14px; height:14px; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+        btn.innerHTML = `<svg class="cmd-expand-icon${node.expanded ? ' expanded' : ''}" style="width:14px; height:14px; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
         btn.onclick = (e) => {
             e.preventDefault();

@@ -1160,7 +1160,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     overflow: hidden;
     text-overflow: ellipsis;
     
-    cursor: copy;
+    cursor: pointer;
     position: relative;
     z-index: 1; /* Por debajo del botón (que tiene 999) */
 }
@@ -1211,9 +1211,18 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 }
 
 .cmd-ctrl-btn:hover {
-    /* Resalte al pasar el mouse sobre el botón específico */
     background: var(--md-sys-color-primary-container);
     color: var(--md-sys-color-primary);
+    transform: scale(1.1);
+}
+
+/* Expand/Collapse icon — animated rotation */
+.cmd-expand-icon {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cmd-expand-icon.expanded {
+    transform: rotate(180deg);
 }
 
 /* 4. COMPATIBILIDAD CON TEMA CLARO (Light Mode Fix) */
