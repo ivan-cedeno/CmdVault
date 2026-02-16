@@ -28,7 +28,7 @@ html, body {
 
 .main-content {
     flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-    padding: 10px 16px 20px 16px;
+    padding: 8px 10px 16px 10px;
 }
 
 /* SCROLLBAR */
@@ -295,18 +295,68 @@ input[type="text"]#search-input:focus {
 }
 
 .section-container {
-    background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-surface-container-high);
-    border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px;
+    background: var(--md-sys-color-surface);
+    border: none;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 .section-header {
-    padding: 8px 12px; background-color: var(--md-sys-color-surface-container);
-    font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+    padding: 10px 12px;
+    background: var(--md-sys-color-surface-container);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
     color: var(--md-sys-color-on-surface-variant); user-select: none; cursor: pointer;
     display: flex; justify-content: space-between; align-items: center;
+    transition: color 0.2s ease, border-color 0.2s ease;
 }
-.section-header:hover { background-color: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-primary); }
-.section-content { padding: 4px 0; }
+.section-header:hover {
+    color: var(--md-sys-color-primary);
+    border-bottom-color: var(--md-sys-color-primary);
+}
+
+/* Section chevron — animated SVG arrow */
+.section-chevron {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.5;
+    color: var(--md-sys-color-on-surface-variant);
+    flex-shrink: 0;
+}
+.section-chevron.collapsed {
+    transform: rotate(-90deg);
+}
+.section-header:hover .section-chevron {
+    opacity: 1;
+    color: var(--md-sys-color-primary);
+}
+
+.section-content { padding: 2px 0; }
 .section-content.collapsed { display: none; }
+
+/* History items — clean CSS classes */
+.history-item {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.history-item:hover {
+    background: var(--md-sys-color-surface-container);
+}
+.history-item-name {
+    font-weight: 600;
+    font-size: 0.85em;
+    color: var(--md-sys-color-primary);
+    margin-bottom: 2px;
+}
+.history-item-cmd {
+    font-family: var(--font-code);
+    font-size: 0.75em;
+    opacity: 0.7;
+}
 
 /* =========================================
    ELEMENTOS DEL ÁRBOL

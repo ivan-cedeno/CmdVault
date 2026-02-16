@@ -120,7 +120,7 @@ function loadDataFromStorage() {
         commandHistory = Array.isArray(items.linuxHistory) ? items.linuxHistory : [];
         qaCollapsed = items.qaCollapsed || false;
         historyCollapsed = items.historyCollapsed || false;
-        commandsCollapsed = false;
+        commandsCollapsed = items.commandsCollapsed || false;
 
         ghToken = items.ghToken || "";
 
@@ -176,13 +176,13 @@ function refreshAll() {
 }
 
 function updateHeaderIcons() {
-    const setArrow = (id, state) => {
+    const setChevron = (id, collapsed) => {
         const el = document.getElementById(id);
-        if (el) el.textContent = state ? '►' : '▼';
+        if (el) el.classList.toggle('collapsed', collapsed);
     };
-    setArrow('cmd-arrow', commandsCollapsed);
-    setArrow('hist-arrow', historyCollapsed);
-    setArrow('qa-arrow', qaCollapsed);
+    setChevron('cmd-arrow', commandsCollapsed);
+    setChevron('hist-arrow', historyCollapsed);
+    setChevron('qa-arrow', qaCollapsed);
 }
 
 // --- RENDERIZADO ÁRBOL ---
@@ -1486,7 +1486,7 @@ function renderHistory() {
     const list = document.getElementById('history-list');
     if (!list) return;
     list.innerHTML = '';
-    const container = document.getElementById('history-container');
+
     if (historyCollapsed) {
         list.style.display = 'none';
     } else {
@@ -1499,29 +1499,19 @@ function renderHistory() {
             const name = typeof item === 'string' ? 'Command' : item.name;
 
             const row = document.createElement('div');
-            row.className = 'history-item copy-flash'; // <--- Etiqueta necesaria para el CSS
-            row.style.display = 'flex';
-            row.style.flexDirection = 'column';
-            row.style.alignItems = 'flex-start';
-            row.style.padding = '8px';
+            row.className = 'history-item copy-flash';
 
             const titleSpan = document.createElement('span');
-            titleSpan.style.fontWeight = 'bold';
-            titleSpan.style.fontSize = '0.85em';
-            titleSpan.style.color = 'var(--md-sys-color-primary)';
-            titleSpan.style.marginBottom = '2px';
+            titleSpan.className = 'history-item-name';
             titleSpan.textContent = name;
 
             const cmdSpan = document.createElement('span');
-            cmdSpan.style.fontFamily = 'var(--font-code)';
-            cmdSpan.style.fontSize = '0.75em';
-            cmdSpan.style.opacity = '0.8';
-            cmdSpan.innerHTML = `🕒 ${cmd.length > 40 ? cmd.substring(0, 37) + '...' : cmd}`;
+            cmdSpan.className = 'history-item-cmd';
+            cmdSpan.textContent = `🕒 ${cmd.length > 40 ? cmd.substring(0, 37) + '...' : cmd}`;
 
             row.appendChild(titleSpan);
             row.appendChild(cmdSpan);
-
-            row.onclick = () => copyToClipboard(cmd, name, row); // <--- Pasamos 'row'
+            row.onclick = () => copyToClipboard(cmd, name, row);
             list.appendChild(row);
         });
     }
