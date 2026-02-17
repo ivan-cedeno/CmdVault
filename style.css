@@ -231,7 +231,83 @@ body {
 }
 .header-row { display: flex; justify-content: space-between; align-items: center; }
 .app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.1rem; }
-.action-buttons { display: flex; gap: 4px; align-items: center; }
+.action-buttons { display: flex; gap: 6px; align-items: center; }
+
+/* ==========================================================================
+   ADD BUTTON PILL GROUP (Folder + Command)
+   ========================================================================== */
+
+.add-btn-group {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--md-sys-color-outline, rgba(255,255,255,0.12));
+    background: var(--md-sys-color-surface-container, rgba(255,255,255,0.04));
+}
+
+.add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+/* Folder button (left pill) — accent primary */
+.add-btn-folder {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-right: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.add-btn-folder:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.add-btn-folder:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+}
+
+/* Command button (right pill) — subtle surface */
+.add-btn-command {
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.add-btn-command:hover {
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-primary);
+    transform: translateY(-1px);
+}
+
+.add-btn-command:active {
+    transform: translateY(0);
+}
+
+.add-btn svg {
+    transition: transform 0.15s ease;
+}
+
+.add-btn:hover svg {
+    transform: scale(1.1);
+}
+
+/* Light mode adjustments */
+.theme-light .add-btn-group {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.theme-light .add-btn-command:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
 .icon-btn {
     background: transparent; border: none; cursor: pointer; color: var(--md-sys-color-on-surface-variant);
     padding: 6px; border-radius: var(--radius-sm); transition: all 0.2s ease; font-size: 1.1rem;

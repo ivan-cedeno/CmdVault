@@ -93,6 +93,7 @@ let qaCollapsed = false;
 let historyCollapsed = false;
 let commandsCollapsed = false;
 let contextTargetId = null;
+let lastSelectedFolderId = null;
 let draggedId = null;
 let appClipboard = null;
 let ghToken = "";
@@ -384,6 +385,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     header.onclick = () => {
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
         if (node.type === 'folder' && !isFav) {
+            lastSelectedFolderId = node.id;
             node.collapsed = !node.collapsed;
             saveData();
             const content = wrapper.querySelector('.folder-content');
@@ -399,6 +401,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         e.preventDefault();
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
         contextTargetId = node.id;
+        if (node.type === 'folder') lastSelectedFolderId = node.id;
         openContextMenu(e, node);
     };
 
@@ -497,6 +500,21 @@ function setupAppEvents() {
         if (domElement) {
             openInlineEditor(domElement, tempNode, 'add', null);
         }
+    });
+
+    // Add Command shortcut (header button)
+    bindClick('btn-add-cmd', () => {
+        if (!lastSelectedFolderId) {
+            showToast("📁 Select a folder first");
+            return;
+        }
+        const folder = findNode(treeData, lastSelectedFolderId);
+        if (!folder || folder.type !== 'folder') {
+            showToast("📁 Select a folder first");
+            lastSelectedFolderId = null;
+            return;
+        }
+        execAdd(lastSelectedFolderId, 'command');
     });
 
     // Global Expand/Collapse All
