@@ -1733,9 +1733,11 @@ function highlightSyntax(c) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
-    // Token-based approach: replace matches with placeholders to prevent nested highlighting
+    // Token-based: replace matches with safe Unicode placeholders, then restore
+    // Using \uFDD0/\uFDD1 (Unicode noncharacters) — safe for innerHTML unlike \x00 which browsers strip
     const tokens = [];
-    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return `\x00${i}\x00`; };
+    const S = '\uFDD0', E = '\uFDD1';
+    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return S + i + E; };
 
     // 1. Strings (double and single quoted)
     text = text.replace(/"[^"]*"|'[^']*'/g, m => ph(m, 'sh-string'));
@@ -1749,11 +1751,9 @@ function highlightSyntax(c) {
     text = text.replace(/(\s)(-[\w-]+)/g, (m, sp, flag) => sp + ph(flag, 'sh-flag'));
     // 6. Operators and pipes (|, ||, &&, ;, >, >>, <, 2>&1)
     text = text.replace(/[|&]{1,2}|[><]+|2&gt;&amp;1|;/g, m => ph(m, 'sh-operator'));
-    // 7. Numbers (standalone numeric values)
-    text = text.replace(/\b(\d+\.?\d*)\b/g, m => ph(m, 'sh-number'));
 
     // Restore tokens
-    text = text.replace(/\x00(\d+)\x00/g, (_, i) => tokens[i]);
+    text = text.replace(new RegExp(S + '(\\d+)' + E, 'g'), (_, i) => tokens[i]);
     return text;
 }
 
