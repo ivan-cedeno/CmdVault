@@ -102,6 +102,7 @@ let toastTimeout = null;
 let isDataLoaded = false;
 let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
 let helpPageState = null; // { nodeId, isEditing }
+let allExpanded = false; // toggle state for expand/collapse all
 
 // --- URL DETECTION ---
 const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
@@ -517,9 +518,33 @@ function setupAppEvents() {
         execAdd(lastSelectedFolderId, 'command');
     });
 
-    // Global Expand/Collapse All
-    bindClick('btn-expand-all', () => toggleAllFolders(false));
-    bindClick('btn-collapse-all', () => toggleAllFolders(true));
+    // Global Expand/Collapse All — single toggle button
+    const toggleAllBtn = document.getElementById('btn-toggle-all');
+    const toggleAllIcon = document.getElementById('toggle-all-icon');
+    const updateToggleIcon = () => {
+        if (!toggleAllIcon) return;
+        if (allExpanded) {
+            // Show "collapse" icon (fold-vertical)
+            toggleAllIcon.innerHTML = `
+                <path d="M12 7v6l3-3m-3 3-3-3" stroke="currentColor" fill="none"></path>
+                <path d="M12 17v-6l3 3m-3-3-3 3" stroke="currentColor" fill="none"></path>
+                <line x1="4" y1="3" x2="20" y2="3" stroke="currentColor"></line>
+                <line x1="4" y1="21" x2="20" y2="21" stroke="currentColor"></line>`;
+            if (toggleAllBtn) toggleAllBtn.title = 'Collapse All';
+        } else {
+            // Show "expand" icon (unfold-vertical)
+            toggleAllIcon.innerHTML = `
+                <path d="M12 3v6l3-3m-3 3-3-3" stroke="currentColor" fill="none"></path>
+                <path d="M12 21v-6l3 3m-3-3-3 3" stroke="currentColor" fill="none"></path>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor"></line>`;
+            if (toggleAllBtn) toggleAllBtn.title = 'Expand All';
+        }
+    };
+    bindClick('btn-toggle-all', () => {
+        allExpanded = !allExpanded;
+        toggleAllFolders(!allExpanded); // allExpanded=true → shouldCollapse=false (expand)
+        updateToggleIcon();
+    });
 
     // Overflow menu toggle
     const overflowBtn = document.getElementById('btn-overflow');

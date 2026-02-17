@@ -31,16 +31,12 @@
                     </button>
                 </div>
 
-                <button id="btn-expand-all" class="header-btn" title="Expand All">
-                    <svg class="header-icon" viewBox="0 0 24 24">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                        <polyline points="6 4 12 10 18 4"></polyline>
-                    </svg>
-                </button>
-                <button id="btn-collapse-all" class="header-btn" title="Collapse All">
-                    <svg class="header-icon" viewBox="0 0 24 24">
-                        <polyline points="6 15 12 9 18 15"></polyline>
-                        <polyline points="6 20 12 14 18 20"></polyline>
+                <button id="btn-toggle-all" class="header-btn" title="Expand All">
+                    <svg id="toggle-all-icon" class="header-icon" viewBox="0 0 24 24">
+                        <!-- Expand state: unfold-vertical icon -->
+                        <path d="M12 3v6l3-3m-3 3-3-3" stroke="currentColor" fill="none"></path>
+                        <path d="M12 21v-6l3 3m-3-3-3 3" stroke="currentColor" fill="none"></path>
+                        <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor"></line>
                     </svg>
                 </button>
 
