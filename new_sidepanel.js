@@ -38,6 +38,58 @@ function resolveIcon(iconValue) {
     return iconValue; // emoji or other value, returned as-is
 }
 
+// --- THEME-AWARE FOLDER COLOR ADAPTATION ---
+// Computes relative luminance per WCAG 2.1 (0 = black, 1 = white)
+function hexToLuminance(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const toLinear = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+// WCAG contrast ratio between two luminance values (1:1 = identical, 21:1 = max)
+function contrastRatio(l1, l2) {
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Maps each theme to its --md-sys-color-surface value (the background behind folder items)
+// IMPORTANT: When adding a new theme, add its surface color here
+const THEME_SURFACE_COLORS = {
+    'theme-dark':        '#1D1B20',
+    'theme-light':       '#FFFFFF',
+    'theme-hacker':      '#0a0a0a',
+    'theme-ocean':       '#1e293b',
+    'theme-teradata':    '#2d3741',
+    'theme-spartan':     '#1C1917',
+    'theme-n64':         '#222224',
+    'theme-xbox':        '#1F1F1F',
+    'theme-fender':      '#E3B96A',
+    'theme-turquoise':   '#162225',
+    'theme-github-dark': '#161B22',
+    'theme-catppuccin':  '#24243E',
+    'theme-nord':        '#3B4252'
+};
+
+/**
+ * Returns the display color for a folder, adapting for contrast against the current theme.
+ * If contrast is sufficient (≥ 2.5:1), returns the original color.
+ * If contrast is insufficient, returns null → CSS handles it via --md-sys-color-on-surface.
+ * Never modifies stored node.color data.
+ */
+function getDisplayColor(color, themeName) {
+    if (!color) return null;
+    const surfaceHex = THEME_SURFACE_COLORS[themeName];
+    if (!surfaceHex) return color; // Unknown theme, don't adapt
+    const colorLum = hexToLuminance(color);
+    const surfaceLum = hexToLuminance(surfaceHex);
+    const ratio = contrastRatio(colorLum, surfaceLum);
+    // 2.5:1 threshold — lower than WCAG AA (4.5:1) since folder labels are decorative/navigational
+    return ratio < 2.5 ? null : color;
+}
+
 // --- ESTADO GLOBAL ---
 let treeData = [];
 let commandHistory = [];
@@ -225,12 +277,15 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     header.style.alignItems = 'center';
 
     // PUNTO 2: Lógica de Prioridad de Color
-    // 1. Color propio del nodo (node.color) 
+    // 1. Color propio del nodo (node.color)
     // 2. Si no tiene, usa el del padre (inheritedColor)
     const activeColor = node.color || inheritedColor;
 
-    if (activeColor && node.type === 'folder') {
-        header.style.color = activeColor;
+    // Adapt color for current theme contrast (never modifies stored data)
+    const displayColor = getDisplayColor(activeColor, currentTheme);
+
+    if (displayColor && node.type === 'folder') {
+        header.style.color = displayColor;
     }
     
     if (node.description) header.title = node.description;
@@ -909,6 +964,8 @@ function cloneNode(node) {
 function changeTheme(themeName) {
     document.body.className = themeName;
     currentTheme = themeName;
+    // Re-render tree so folder colors adapt to the new theme's contrast
+    if (isDataLoaded) refreshAll();
 }
 
 // ==========================================================================
@@ -1369,6 +1426,22 @@ function renderColorPalette() {
     if (!p) return;
 
     p.innerHTML = '';
+
+    // Reset/clear color option (restores folder to theme-default color)
+    const resetDot = document.createElement('div');
+    resetDot.className = 'color-dot color-dot-reset';
+    resetDot.title = 'Reset to default';
+    resetDot.innerHTML = '<svg viewBox="0 0 20 20" width="14" height="14"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5"/></svg>';
+    resetDot.onclick = () => {
+        const updated = updateItemProperty(treeData, contextTargetId, { color: null });
+        if (updated) {
+            saveData();
+            if (typeof refreshAll === 'function') refreshAll();
+            const menu = document.getElementById('context-menu');
+            if (menu) menu.classList.add('hidden');
+        }
+    };
+    p.appendChild(resetDot);
 
     FOLDER_COLORS.forEach(c => {
         const d = document.createElement('div');
