@@ -92,6 +92,7 @@
     </div>
 
     <input type="file" id="file-input" hidden accept=".json">
+    <input type="file" id="file-input-merge" hidden accept=".json">
     <div id="status-msg" class="status-msg hidden"></div>
 
     <!-- CONTEXT MENU ACTUALIZADO -->
@@ -210,10 +211,13 @@
                 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
                 Data Management
             </h3>
-            <div style="display:flex; gap:10px; margin-bottom: 25px;">
+            <div style="display:flex; gap:10px; margin-bottom: 10px;">
                 <button id="btn-export" class="icon-btn" style="flex:1;">💾 Backup</button>
                 <button id="btn-import" class="icon-btn" style="flex:1;">📂 Import</button>
-                <button id="btn-reset" class="icon-btn danger" style="flex:1;">🗑️ Reset</button>
+                <button id="btn-merge-import" class="icon-btn" style="flex:1;">📥 Merge</button>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <button id="btn-reset" class="icon-btn danger" style="width:100%;">🗑️ Reset</button>
             </div>
 
             <button id="btn-close-settings" class="btn-secondary" style="margin-top: 10px;">Close</button>

@@ -636,6 +636,60 @@ function setupAppEvents() {
         };
     }
 
+    // 2b. Merge Import (agrega sin reemplazar)
+    const mergeFileInput = document.getElementById('file-input-merge');
+    bindClick('btn-merge-import', () => {
+        if (mergeFileInput) mergeFileInput.click();
+    });
+
+    if (mergeFileInput) {
+        mergeFileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const importedData = JSON.parse(ev.target.result);
+                    if (!Array.isArray(importedData)) {
+                        alert("Error: Invalid JSON format (Expected an Array)");
+                        return;
+                    }
+
+                    // Sanitize imported nodes (assign missing IDs, default names)
+                    const cleanedData = cleanNodes(importedData);
+
+                    // Derive folder name from filename (strip .json extension)
+                    const folderName = file.name.replace(/\.json$/i, '');
+
+                    // Wrap imported data in a new root folder
+                    const wrapperFolder = {
+                        id: genId(),
+                        name: folderName,
+                        type: 'folder',
+                        children: cleanedData,
+                        collapsed: false,
+                        color: null
+                    };
+
+                    // Append to existing data (never overwrites)
+                    treeData.push(wrapperFolder);
+                    saveData();
+                    refreshAll();
+
+                    const cmdCount = countCommands(cleanedData);
+                    showToast(`📥 Merged: ${cmdCount} commands as "${folderName}"`);
+
+                } catch (ex) {
+                    console.error(ex);
+                    alert("Error parsing JSON file. Please check the file.");
+                }
+                mergeFileInput.value = '';
+            };
+            reader.readAsText(file);
+        };
+    }
+
     // 3. Factory Reset
     bindClick('btn-reset', () => {
         if (confirm("⚠️ DANGER ZONE \n\nAre you sure you want to delete ALL commands and history? This action cannot be undone.")) {
@@ -925,6 +979,15 @@ function togglePin(id) {
 
 // --- UTILS ---
 function genId() { return 'n-' + Date.now() + Math.random().toString(36).substr(2, 4); }
+
+function countCommands(nodes) {
+    let count = 0;
+    for (const n of nodes) {
+        if (n.type === 'command') count++;
+        if (n.children) count += countCommands(n.children);
+    }
+    return count;
+}
 
 function findNode(nodes, id) {
     for (let n of nodes) {
