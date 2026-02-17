@@ -499,6 +499,10 @@ function setupAppEvents() {
         }
     });
 
+    // Global Expand/Collapse All
+    bindClick('btn-expand-all', () => toggleAllFolders(false));
+    bindClick('btn-collapse-all', () => toggleAllFolders(true));
+
     bindClick('btn-clear-clipboard', () => {
         navigator.clipboard.writeText('');
         appClipboard = null;
@@ -575,6 +579,7 @@ function setupAppEvents() {
             // NEW ACTIONS
             else if (id === 'ctx-expand-all') { toggleFolderRecursively(contextTargetId, false); close(); }
             else if (id === 'ctx-collapse-all') { toggleFolderRecursively(contextTargetId, true); close(); }
+            else if (id === 'ctx-export-folder') { exportFolder(contextTargetId); close(); }
 
             else if (id === 'ctx-pin-toggle') { togglePin(contextTargetId); close(); }
             else if (id === 'ctx-open-url') {
@@ -964,6 +969,21 @@ function toggleFolderRecursively(id, shouldCollapse) {
     refreshAll();
 }
 
+// Global expand/collapse: traverses entire treeData in one pass
+function toggleAllFolders(shouldCollapse) {
+    const traverse = (nodes) => {
+        for (const n of nodes) {
+            if (n.type === 'folder') {
+                n.collapsed = shouldCollapse;
+                if (n.children) traverse(n.children);
+            }
+        }
+    };
+    traverse(treeData);
+    saveData();
+    refreshAll();
+}
+
 function addItemToTree(parentId, item) {
     if (!parentId) {
         treeData.push(item);
@@ -999,6 +1019,28 @@ function togglePin(id) {
 
 // --- UTILS ---
 function genId() { return 'n-' + Date.now() + Math.random().toString(36).substr(2, 4); }
+
+function exportFolder(id) {
+    const node = findNode(treeData, id);
+    if (!node || node.type !== 'folder') return showToast("⚠️ Folder not found");
+
+    const dataStr = JSON.stringify(node.children || [], null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = (node.name || 'folder').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `cmdvault_${safeName}_${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const cmdCount = countCommands(node.children || []);
+    showToast(`💾 Exported "${node.name}" (${cmdCount} commands)`);
+}
 
 function countCommands(nodes) {
     let count = 0;
