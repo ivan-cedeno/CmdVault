@@ -503,15 +503,35 @@ function setupAppEvents() {
     bindClick('btn-expand-all', () => toggleAllFolders(false));
     bindClick('btn-collapse-all', () => toggleAllFolders(true));
 
-    bindClick('btn-clear-clipboard', () => {
+    // Overflow menu toggle
+    const overflowBtn = document.getElementById('btn-overflow');
+    const overflowMenu = document.getElementById('overflow-menu');
+    if (overflowBtn && overflowMenu) {
+        overflowBtn.onclick = (e) => {
+            e.stopPropagation();
+            overflowMenu.classList.toggle('hidden');
+        };
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.overflow-menu-wrapper')) {
+                overflowMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    bindClick('overflow-clear-clipboard', () => {
         navigator.clipboard.writeText('');
         appClipboard = null;
         refreshAll();
+        if (overflowMenu) overflowMenu.classList.add('hidden');
         showToast("🧹 Clipboard Cleared");
     });
 
     const sOverlay = document.getElementById('settings-overlay');
-    bindClick('btn-settings', () => { if (sOverlay) sOverlay.classList.remove('hidden'); });
+    bindClick('overflow-settings', () => {
+        if (sOverlay) sOverlay.classList.remove('hidden');
+        if (overflowMenu) overflowMenu.classList.add('hidden');
+    });
     bindClick('btn-close-settings', () => { if (sOverlay) sOverlay.classList.add('hidden'); });
     if (sOverlay) sOverlay.onclick = (e) => { if (e.target === sOverlay) sOverlay.classList.add('hidden'); };
 
@@ -1609,9 +1629,11 @@ function updateItemProperty(list, id, properties) {
 }
 
 function setupDocking() {
-    const btn = document.getElementById('btn-dock-toggle');
+    const btn = document.getElementById('overflow-undock');
     if (btn) btn.onclick = async () => {
         try {
+            const overflowMenu = document.getElementById('overflow-menu');
+            if (overflowMenu) overflowMenu.classList.add('hidden');
             const w = await chrome.windows.getCurrent();
             if (w.type === 'popup') {
                 const m = await chrome.windows.getLastFocused({ windowTypes: ['normal'] });

@@ -232,7 +232,6 @@ body {
 .header-row { display: flex; justify-content: space-between; align-items: center; }
 .app-title { font-family: var(--font-code); font-weight: 700; color: var(--md-sys-color-primary); font-size: 1.1rem; }
 .action-buttons { display: flex; gap: 4px; align-items: center; }
-.separator { width: 1px; height: 18px; background-color: var(--md-sys-color-outline); margin: 0 4px; opacity: 0.3; }
 .icon-btn {
     background: transparent; border: none; cursor: pointer; color: var(--md-sys-color-on-surface-variant);
     padding: 6px; border-radius: var(--radius-sm); transition: all 0.2s ease; font-size: 1.1rem;
@@ -1967,3 +1966,83 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .theme-hacker .hp-keyword  { color: #0f0; }
 .theme-hacker .hp-string   { color: #7fff7f; }
 .theme-hacker .hp-comment  { color: #4a7a4a; }
+
+/* ==========================================================================
+   OVERFLOW MENU (Three-dot ⋮ dropdown)
+   ========================================================================== */
+
+.overflow-menu-wrapper {
+    position: relative;
+}
+
+.overflow-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 190px;
+    padding: 6px;
+
+    /* Glassmorphism matching context menu */
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+
+    z-index: 9999;
+    animation: menuFadeIn 0.12s ease-out;
+}
+
+.overflow-menu.hidden {
+    display: none !important;
+}
+
+.overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.overflow-item:hover {
+    background: var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.2));
+    color: var(--md-sys-color-primary);
+}
+
+.overflow-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.overflow-item:hover svg {
+    opacity: 1;
+}
+
+/* Light mode override for overflow menu */
+.theme-light .overflow-menu,
+.light-mode .overflow-menu {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+.theme-light .overflow-item,
+.light-mode .overflow-item {
+    color: #1e293b !important;
+}
+
+.theme-light .overflow-item:hover,
+.light-mode .overflow-item:hover {
+    background: rgba(66, 135, 245, 0.1) !important;
+    color: var(--md-sys-color-primary) !important;
+}
