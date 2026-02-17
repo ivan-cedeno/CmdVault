@@ -346,6 +346,18 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     header.appendChild(iconSpan);
     header.appendChild(nameSpan);
 
+    // Counter badge for folders
+    if (node.type === 'folder') {
+        const cmdCount = countCommands(node.children || []);
+        if (cmdCount > 0) {
+            const countBadge = document.createElement('span');
+            countBadge.className = 'folder-count-badge';
+            countBadge.textContent = cmdCount;
+            countBadge.title = `${cmdCount} command${cmdCount !== 1 ? 's' : ''}`;
+            header.appendChild(countBadge);
+        }
+    }
+
     if (Array.isArray(node.tags) && node.tags.length > 0) {
         const tagsDiv = document.createElement('div');
         tagsDiv.className = 'tags-container';

@@ -402,6 +402,32 @@ input[type="text"]#search-input:focus {
 }
 .tree-item:hover { background-color: var(--md-sys-color-surface-container-high); }
 .item-header { display: flex; align-items: center; font-size: 0.85rem; padding: 4px; color: var(--md-sys-color-on-surface); }
+
+/* Folder command count badge */
+.folder-count-badge {
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.tree-item:hover .folder-count-badge {
+    opacity: 1;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
 /* Tag container — flex-wrap to prevent overflow */
 .tags-container {
     margin-left: auto;
@@ -552,21 +578,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     margin-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     justify-content: center;
-}
-
-.color-dot {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.color-dot:hover {
-    transform: scale(1.3);
-    border-color: white;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 /* Animación de apertura */
@@ -809,8 +820,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     margin: 5px 0 !important;
     border: 0 !important;
     
-    /* CAMBIO: Color más intenso y sin transparencia */
-    border-top: 1px solid #888 !important; /* Gris sólido y visible */
+    border-top: 1px solid var(--md-sys-color-outline) !important;
     opacity: 1 !important; /* 100% visible (antes 0.5) */
 }
 
@@ -884,9 +894,9 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 
 /* 3. VISTA PREVIA DEL COMANDO (Estilo Código) */
 .cmd-preview-box {
-    background-color: #2b2b2b; /* Fondo oscuro tipo terminal */
-    color: #a5d6ff; /* Texto azul claro */
-    font-family: 'Consolas', 'Roboto Mono', monospace;
+    background-color: var(--cmd-bg);
+    color: var(--accent-green);
+    font-family: var(--font-code);
     font-size: 11px;
     padding: 12px;
     border-radius: 8px;
@@ -969,7 +979,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     margin-top: 30px; /* Separación del resto de controles */
     margin-bottom: 10px;
     letter-spacing: 0.5px; /* Un poco de aire entre letras */
-    font-family: 'Roboto', sans-serif; /* O la fuente que uses en tu app */
+    font-family: var(--font-ui);
     
     /* Opcional: Evitar que el usuario lo seleccione por accidente */
     user-select: none;
@@ -1014,39 +1024,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .header-btn:hover .header-icon {
     opacity: 1;
     transform: scale(1.1);
-}
-
-/* --- 1. ICONOS Y BOTONES DEL HEADER (MANTENER) --- */
-.header-btn {
-    background: transparent !important;
-    border: none !important;
-    padding: 8px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: inherit;
-    transition: all 0.2s ease;
-}
-
-.header-separator {
-    width: 1px;
-    height: 20px;
-    background-color: var(--md-sys-color-outline-variant, rgba(255,255,255,0.1));
-    margin: 0 4px;
-    opacity: 0.5;
-}
-
-.header-icon {
-    width: 20px;
-    height: 20px;
-    fill: none !important;
-    stroke: currentColor !important;
-    stroke-width: 1.5px !important;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.7;
-    transition: opacity 0.2s;
 }
 
 /* --- CONTENEDOR DE BÚSQUEDA V3 (OPTIMIZADO) --- */
@@ -1120,15 +1097,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     font-weight: 300;
 }
 
-/* --- ESTADO FOCUS DINÁMICO --- */
-.search-wrapper:focus-within {
-    background: rgba(15, 23, 42, 0.6);
-    /* Resplandor más intenso pero fiel al tema */
-    border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 10px var(--md-sys-color-primary, rgba(66, 135, 245, 0.4));
-    transform: translateY(-1px);
-}
-
 /* --- PULIDO FINAL V3: HIGHLIGHT & FOCUS --- */
 
 /* REEMPLAZA TU BLOQUE .search-highlight ACTUAL POR ESTE */
@@ -1159,28 +1127,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     box-shadow: 0 0 0 3px rgba(66, 135, 245, 0.15), 
                 0 4px 12px rgba(0, 0, 0, 0.4);
     transform: translateY(-1px);
-}
-
-/* --- ICONOS DE CARPETA V3 --- */
-.folder-icon-v3 {
-    width: 18px;
-    height: 18px;
-    fill: none !important;
-    stroke: currentColor !important;
-    stroke-width: 1.5px !important;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    margin-right: 10px;
-    vertical-align: middle;
-    opacity: 0.8;
-    transition: transform 0.2s ease;
-}
-
-/* Efecto al pasar el mouse sobre la fila de la carpeta */
-.folder-item:hover .folder-icon-v3 {
-    transform: scale(1.1);
-    opacity: 1;
-    color: var(--md-sys-color-primary);
 }
 
 /* --- ICONOS DE CARPETA V3 --- */
@@ -1244,7 +1190,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .cmd-preview {
     background: transparent !important;
     border: none !important;
-    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-family: var(--font-code);
     font-size: 12px;
     line-height: 1.5;
     color: var(--md-sys-color-on-surface, #e2e8f0);
@@ -1326,30 +1272,25 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 }
 
 /* 4. COMPATIBILIDAD CON TEMA CLARO (Light Mode Fix) */
-.theme-light .cmd-wrapper,
-.light-mode .cmd-wrapper {
+.theme-light .cmd-wrapper {
     background: rgba(255, 255, 255, 0.7) !important; /* Vidrio esmerilado claro */
     border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
-.theme-light .cmd-wrapper:hover,
-.light-mode .cmd-wrapper:hover {
+.theme-light .cmd-wrapper:hover {
     border-color: var(--md-sys-color-primary) !important;
 }
 
-.theme-light .cmd-preview,
-.light-mode .cmd-preview {
+.theme-light .cmd-preview {
     color: #1e293b !important; /* Texto oscuro para legibilidad */
 }
 
-.theme-light .cmd-ctrl-btn,
-.light-mode .cmd-ctrl-btn {
+.theme-light .cmd-ctrl-btn {
     background: rgba(0, 0, 0, 0.04);
     color: rgba(0, 0, 0, 0.6);
 }
 
-.theme-light .search-highlight,
-.light-mode .search-highlight {
+.theme-light .search-highlight {
     /* Texto oscuro para máxima legibilidad sobre el dorado */
     color: #1e293b !important; 
     
@@ -1362,8 +1303,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 
 /* --- REFINAMIENTO DE CONTEXT MENU PARA MODO CLARO --- */
 
-.theme-light .context-menu,
-.light-mode .context-menu {
+.theme-light .context-menu {
     /* Vidrio esmerilado blanco premium */
     background: rgba(255, 255, 255, 0.85) !important; 
     backdrop-filter: blur(15px);
@@ -1380,14 +1320,12 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     font-size: 11px;
 }
 
-.theme-light .ctx-item,
-.light-mode .ctx-item {
+.theme-light .ctx-item {
     color: #1e293b !important; /* El color Slate que ya usamos */
     font-weight: 500;
 }
 
-.theme-light .ctx-item:hover,
-.light-mode .ctx-item:hover {
+.theme-light .ctx-item:hover {
     background: rgba(66, 135, 245, 0.1) !important;
     color: var(--md-sys-color-primary) !important;
 }
@@ -1494,7 +1432,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     content: '' !important;
     position: absolute !important;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: #22c55e !important;
+    background: var(--accent-green) !important;
     opacity: 0 !important;
     pointer-events: none !important;
     z-index: 999999 !important;
@@ -1504,11 +1442,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .copy-flash.active::after {
     opacity: 0.6 !important;
     transition: none !important;
-}
-
-/* Smooth transition for the ctrl button icon swap */
-.cmd-ctrl-btn {
-    transition: opacity 0.15s ease-in-out;
 }
 
 /* --- SVG Animated Checkmark --- */
@@ -1556,11 +1489,6 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     max-height: 0 !important;
     opacity: 0 !important;
     pointer-events: none !important;
-}
-
-/* Rotación del icono para dar feedback de apertura */
-.folder-icon-v3 {
-    transition: transform 0.2s ease !important;
 }
 
 .item-header.collapsed .folder-icon-v3 {
@@ -1676,14 +1604,12 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     transform: scale(0.95);
 }
 
-.theme-light .cmd-open-url-btn,
-.light-mode .cmd-open-url-btn {
+.theme-light .cmd-open-url-btn {
     background: rgba(0, 0, 0, 0.04);
     color: rgba(0, 0, 0, 0.6);
 }
 
-.theme-light .cmd-open-url-btn:hover,
-.light-mode .cmd-open-url-btn:hover {
+.theme-light .cmd-open-url-btn:hover {
     background: var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.15));
     color: var(--md-sys-color-primary);
 }
@@ -1913,7 +1839,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
     width: 44px;
     background: var(--md-sys-color-surface-container, rgba(0,0,0,0.2));
     color: var(--md-sys-color-on-surface-variant);
-    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-family: var(--font-code);
     font-size: 13px;
     line-height: 1.5;
     padding: 12px 8px 12px 0;
@@ -1932,7 +1858,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 /* Content View (read-only with syntax highlighting) */
 .help-content-view {
     flex: 1;
-    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-family: var(--font-code);
     font-size: 13px;
     line-height: 1.5;
     padding: 12px;
@@ -1948,7 +1874,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 /* Content Edit (textarea) */
 .help-content-edit {
     flex: 1;
-    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-family: var(--font-code);
     font-size: 13px;
     line-height: 1.5;
     padding: 12px;
@@ -1991,7 +1917,7 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 .help-position-indicator {
     font-size: 11px;
     color: var(--md-sys-color-on-surface-variant);
-    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-family: var(--font-code);
     margin-right: auto;
     opacity: 0.6;
 }
@@ -2105,20 +2031,17 @@ body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
 }
 
 /* Light mode override for overflow menu */
-.theme-light .overflow-menu,
-.light-mode .overflow-menu {
+.theme-light .overflow-menu {
     background: rgba(255, 255, 255, 0.92) !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
 }
 
-.theme-light .overflow-item,
-.light-mode .overflow-item {
+.theme-light .overflow-item {
     color: #1e293b !important;
 }
 
-.theme-light .overflow-item:hover,
-.light-mode .overflow-item:hover {
+.theme-light .overflow-item:hover {
     background: rgba(66, 135, 245, 0.1) !important;
     color: var(--md-sys-color-primary) !important;
 }
