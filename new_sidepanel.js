@@ -1727,7 +1727,34 @@ function isVisible(n, f) {
 }
 
 function highlightSyntax(c) {
-    return c.replace(/(".*?"|'.*?')/g, '<span class="sh-string">$1</span>').replace(/(\s-[\w-]+)/g, '<span class="sh-flag">$1</span>');
+    // HTML escape first to prevent XSS
+    let text = c
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Token-based approach: replace matches with placeholders to prevent nested highlighting
+    const tokens = [];
+    const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return `\x00${i}\x00`; };
+
+    // 1. Strings (double and single quoted)
+    text = text.replace(/"[^"]*"|'[^']*'/g, m => ph(m, 'sh-string'));
+    // 2. Comments (# to end of line)
+    text = text.replace(/#.*/g, m => ph(m, 'sh-comment'));
+    // 3. Variables ($VAR, ${VAR})
+    text = text.replace(/\$\{[^}]+\}|\$\w+/g, m => ph(m, 'sh-variable'));
+    // 4. Keywords (shell builtins, common commands, devops tools)
+    text = text.replace(/\b(if|then|else|elif|fi|for|do|done|while|case|esac|function|return|exit|echo|printf|export|source|alias|unalias|sudo|cd|ls|grep|egrep|awk|sed|cat|mkdir|rm|rmdir|cp|mv|chmod|chown|curl|wget|ssh|scp|rsync|docker|kubectl|az|aws|gcloud|apt|yum|dnf|pip|pip3|npm|npx|yarn|git|systemctl|journalctl|tar|zip|unzip|find|xargs|sort|uniq|wc|head|tail|tee|nohup|cron|crontab|set|unset|eval|exec|trap|wait|read|test|true|false|shift|local|declare|typeset|readonly|select|until|break|continue|bteq|mload|fastload|tpt|tdput|python|python3|node|java|go|make|cmake|gcc|npm|which|whereis|whoami|hostname|uname|df|du|ps|top|htop|kill|killall|ping|traceroute|netstat|ss|iptables|mount|umount|ln|touch|nano|vi|vim|less|more|env|printenv)\b/g, m => ph(m, 'sh-keyword'));
+    // 5. Flags (-flag, --long-flag)
+    text = text.replace(/(\s)(-[\w-]+)/g, (m, sp, flag) => sp + ph(flag, 'sh-flag'));
+    // 6. Operators and pipes (|, ||, &&, ;, >, >>, <, 2>&1)
+    text = text.replace(/[|&]{1,2}|[><]+|2&gt;&amp;1|;/g, m => ph(m, 'sh-operator'));
+    // 7. Numbers (standalone numeric values)
+    text = text.replace(/\b(\d+\.?\d*)\b/g, m => ph(m, 'sh-number'));
+
+    // Restore tokens
+    text = text.replace(/\x00(\d+)\x00/g, (_, i) => tokens[i]);
+    return text;
 }
 
 function getAllPinnedItems(nodes) {

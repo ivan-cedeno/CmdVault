@@ -487,16 +487,86 @@ input[type="text"]#search-input:focus {
 
 /* COMANDOS Y SINTAXIS */
 
+/* --- Default (GitHub Dark) syntax colors --- */
+.sh-keyword  { color: #ff7b72; font-weight: 600; }
+.sh-string   { color: #a5d6ff; }
+.sh-flag     { color: #79c0ff; font-style: italic; }
+.sh-comment  { color: #8b949e; font-style: italic; }
+.sh-variable { color: #ffa657; }
+.sh-operator { color: #ff7b72; }
+.sh-number   { color: #79c0ff; }
 
+/* --- Theme: Light --- */
+body.theme-light .sh-keyword  { color: #d73a49; }
+body.theme-light .sh-string   { color: #032f62; }
+body.theme-light .sh-flag     { color: #005cc5; }
+body.theme-light .sh-comment  { color: #6a737d; }
+body.theme-light .sh-variable { color: #e36209; }
+body.theme-light .sh-operator { color: #d73a49; }
+body.theme-light .sh-number   { color: #005cc5; }
 
-.sh-keyword { color: #ff7b72; font-weight: bold; }
-.sh-string { color: #a5d6ff; }
-.sh-flag { color: #79c0ff; font-style: italic; }
-.sh-comment { color: #8b949e; }
-body.theme-light .sh-keyword { color: #d73a49; }
-body.theme-light .sh-string { color: #032f62; }
-body.theme-hacker .sh-keyword { color: #fff; }
-body.theme-hacker .sh-string { color: #0f0; opacity: 0.8; }
+/* --- Theme: Dark (Material) --- */
+body.theme-dark .sh-keyword  { color: #c792ea; }
+body.theme-dark .sh-string   { color: #c3e88d; }
+body.theme-dark .sh-flag     { color: #82aaff; }
+body.theme-dark .sh-comment  { color: #676e95; }
+body.theme-dark .sh-variable { color: #f78c6c; }
+body.theme-dark .sh-operator { color: #89ddff; }
+body.theme-dark .sh-number   { color: #f78c6c; }
+
+/* --- Theme: Hacker --- */
+body.theme-hacker .sh-keyword  { color: #fff; font-weight: bold; }
+body.theme-hacker .sh-string   { color: #0f0; opacity: 0.8; }
+body.theme-hacker .sh-flag     { color: #0f0; opacity: 0.6; }
+body.theme-hacker .sh-comment  { color: #005500; }
+body.theme-hacker .sh-variable { color: #7fff00; }
+body.theme-hacker .sh-operator { color: #00ff00; }
+body.theme-hacker .sh-number   { color: #00cc00; }
+
+/* --- Theme: Ocean --- */
+body.theme-ocean .sh-keyword  { color: #f97316; }
+body.theme-ocean .sh-string   { color: #34d399; }
+body.theme-ocean .sh-flag     { color: #38bdf8; }
+body.theme-ocean .sh-comment  { color: #64748b; }
+body.theme-ocean .sh-variable { color: #fbbf24; }
+body.theme-ocean .sh-operator { color: #f97316; }
+body.theme-ocean .sh-number   { color: #38bdf8; }
+
+/* --- Theme: Teradata --- */
+body.theme-teradata .sh-keyword  { color: #F37423; }
+body.theme-teradata .sh-string   { color: #22c55e; }
+body.theme-teradata .sh-flag     { color: #60a5fa; }
+body.theme-teradata .sh-comment  { color: #5c6f7f; }
+body.theme-teradata .sh-variable { color: #fbbf24; }
+body.theme-teradata .sh-operator { color: #F37423; }
+body.theme-teradata .sh-number   { color: #60a5fa; }
+
+/* --- Theme: Turquoise --- */
+body.theme-turquoise .sh-keyword  { color: #00E5FF; }
+body.theme-turquoise .sh-string   { color: #18FFFF; opacity: 0.7; }
+body.theme-turquoise .sh-flag     { color: #4DD0E1; }
+body.theme-turquoise .sh-comment  { color: #00838F; }
+body.theme-turquoise .sh-variable { color: #64FFDA; }
+body.theme-turquoise .sh-operator { color: #00E5FF; }
+body.theme-turquoise .sh-number   { color: #4DD0E1; }
+
+/* --- Theme: Catppuccin Mocha --- */
+body.theme-catppuccin .sh-keyword  { color: #CBA6F7; }
+body.theme-catppuccin .sh-string   { color: #A6E3A1; }
+body.theme-catppuccin .sh-flag     { color: #89B4FA; }
+body.theme-catppuccin .sh-comment  { color: #6C7086; }
+body.theme-catppuccin .sh-variable { color: #FAB387; }
+body.theme-catppuccin .sh-operator { color: #89DCEB; }
+body.theme-catppuccin .sh-number   { color: #F9E2AF; }
+
+/* --- Theme: Nord --- */
+body.theme-nord .sh-keyword  { color: #81A1C1; }
+body.theme-nord .sh-string   { color: #A3BE8C; }
+body.theme-nord .sh-flag     { color: #88C0D0; }
+body.theme-nord .sh-comment  { color: #616E88; }
+body.theme-nord .sh-variable { color: #D08770; }
+body.theme-nord .sh-operator { color: #81A1C1; }
+body.theme-nord .sh-number   { color: #B48EAD; }
 
 
 
