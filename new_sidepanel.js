@@ -63,10 +63,6 @@ const THEME_SURFACE_COLORS = {
     'theme-hacker':      '#0a0a0a',
     'theme-ocean':       '#1e293b',
     'theme-teradata':    '#2d3741',
-    'theme-spartan':     '#1C1917',
-    'theme-n64':         '#222224',
-    'theme-xbox':        '#1F1F1F',
-    'theme-fender':      '#E3B96A',
     'theme-turquoise':   '#162225',
     'theme-github-dark': '#161B22',
     'theme-catppuccin':  '#24243E',
@@ -100,7 +96,7 @@ let contextTargetId = null;
 let draggedId = null;
 let appClipboard = null;
 let ghToken = "";
-let currentTheme = "theme-dark";
+let currentTheme = "theme-github-dark";
 let toastTimeout = null;
 let isDataLoaded = false;
 let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
