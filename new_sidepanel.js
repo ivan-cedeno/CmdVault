@@ -365,6 +365,17 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
                 badge.textContent = t;
             }
 
+            // Clickable tag → filter by #tag
+            badge.onclick = (e) => {
+                e.stopPropagation();
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) {
+                    searchInput.value = '#' + normalizedTag;
+                    searchInput.focus();
+                    refreshAll();
+                }
+            };
+
             tagsDiv.appendChild(badge);
         });
         header.appendChild(tagsDiv);
@@ -521,6 +532,19 @@ function setupAppEvents() {
 
     const search = document.getElementById('search-input');
     if (search) search.oninput = (e) => refreshAll();
+
+    // Ctrl+Space → focus search box (global shortcut)
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === ' ') {
+            // Don't activate during inline edit or help page
+            if (inlineEditState || helpPageState) return;
+            e.preventDefault();
+            if (search) {
+                search.focus();
+                search.select();
+            }
+        }
+    });
 
     const themeSel = document.getElementById('theme-selector');
     if (themeSel) themeSel.onchange = (e) => {

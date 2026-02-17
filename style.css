@@ -370,6 +370,12 @@ input[type="text"]#search-input:focus {
     transform: translateY(-1px); /* Sutil levantamiento */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+/* Clickable tag: extra feedback on direct badge hover */
+.tag-badge:hover {
+    cursor: pointer;
+    filter: brightness(1.3);
+    transform: translateY(-2px) scale(1.05);
+}
 
 /* DRAG & DROP & CUT STATE */
 .tree-item.dragging { opacity: 0.4; border: 2px dashed var(--md-sys-color-primary); }
