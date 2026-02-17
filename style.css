@@ -403,29 +403,20 @@ input[type="text"]#search-input:focus {
 .tree-item:hover { background-color: var(--md-sys-color-surface-container-high); }
 .item-header { display: flex; align-items: center; font-size: 0.85rem; padding: 4px; color: var(--md-sys-color-on-surface); }
 
-/* Folder command count badge */
+/* Folder command count — minimal inline number */
 .folder-count-badge {
     font-size: 10px;
-    font-weight: 600;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: 10px;
-    background: var(--md-sys-color-surface-container-high);
+    font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 8px;
+    margin-left: 6px;
     flex-shrink: 0;
-    opacity: 0.6;
-    transition: all 0.2s ease;
+    opacity: 0.35;
+    transition: opacity 0.2s ease;
+    user-select: none;
 }
 
 .tree-item:hover .folder-count-badge {
-    opacity: 1;
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
+    opacity: 0.6;
 }
 
 /* Tag container — flex-wrap to prevent overflow */
