@@ -308,6 +308,14 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     // Icono de Comando: Se mantiene el estilo de terminal alineado con los nuevos folders
     const iconCmd = `<svg class="folder-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
 
+    // Drag handle (grip dots) — only for draggable items (not favorites or filtered)
+    if (!isFav && !filter) {
+        const grip = document.createElement('span');
+        grip.className = 'drag-handle';
+        grip.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><circle cx="9" cy="5" r="1.5"></circle><circle cx="15" cy="5" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="19" r="1.5"></circle><circle cx="15" cy="19" r="1.5"></circle></svg>`;
+        header.appendChild(grip);
+    }
+
     // Chevron indicator for folders (> rotates to v when expanded)
     let chevronSpan = null;
     if (node.type === 'folder') {
