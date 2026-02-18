@@ -103,6 +103,7 @@ let isDataLoaded = false;
 let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
 let helpPageState = null; // { nodeId, isEditing }
 let allExpanded = false; // toggle state for expand/collapse all
+let selectedNodeId = null; // Currently keyboard-selected tree item ID
 
 // --- URL DETECTION ---
 const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
@@ -223,6 +224,7 @@ function refreshAll() {
     renderHistory();
     renderFavorites();
     updateHeaderIcons();
+    restoreSelection();
 }
 
 function updateHeaderIcons() {
@@ -397,6 +399,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
 
     header.onclick = () => {
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
+        setSelectedNode(node.id);
         if (node.type === 'folder' && !isFav) {
             lastSelectedFolderId = node.id;
             node.collapsed = !node.collapsed;
@@ -414,6 +417,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         e.preventDefault();
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
         contextTargetId = node.id;
+        setSelectedNode(node.id);
         if (node.type === 'folder') lastSelectedFolderId = node.id;
         openContextMenu(e, node);
     };
@@ -487,6 +491,56 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         wrapper.appendChild(inner);
     }
     return wrapper;
+}
+
+// ==========================================================================
+//  KEYBOARD SELECTION STATE
+// ==========================================================================
+
+function setSelectedNode(id) {
+    const prev = document.querySelector('.tree-item.selected');
+    if (prev) prev.classList.remove('selected');
+
+    selectedNodeId = id;
+    if (id === null) return;
+
+    const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
+    if (el) {
+        el.classList.add('selected');
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+
+function getVisibleTreeItems() {
+    const items = [];
+
+    // 1. Favorites section
+    const qaList = document.getElementById('qa-list');
+    if (qaList && qaList.style.display !== 'none') {
+        qaList.querySelectorAll('.tree-item').forEach(el => {
+            if (el.offsetParent !== null && !el.closest('.folder-content.collapsed')) items.push(el);
+        });
+    }
+
+    // 2. Main tree container
+    const treeContainer = document.getElementById('tree-container');
+    if (treeContainer && treeContainer.style.display !== 'none') {
+        treeContainer.querySelectorAll('.tree-item').forEach(el => {
+            if (el.offsetParent !== null && !el.closest('.folder-content.collapsed')) items.push(el);
+        });
+    }
+
+    return items;
+}
+
+function restoreSelection() {
+    if (selectedNodeId === null) return;
+    const el = document.querySelector(`.main-content .tree-item[data-node-id="${selectedNodeId}"]`);
+    if (el) {
+        el.classList.add('selected');
+    } else {
+        selectedNodeId = null;
+    }
 }
 
 // --- SETUP EVENTOS ---
@@ -625,6 +679,130 @@ function setupAppEvents() {
         }
     });
 
+    // ==========================================================================
+    //  GLOBAL KEYBOARD SHORTCUTS (↑↓ navigation, Delete, F2, Enter, Escape)
+    // ==========================================================================
+    document.addEventListener('keydown', (e) => {
+        // Guard: block during inline edit, help page, or modals
+        if (inlineEditState) return;
+        if (helpPageState) return;
+
+        const confirmModal = document.getElementById('confirm-modal-overlay');
+        if (confirmModal && !confirmModal.classList.contains('hidden')) return;
+        const settingsOvl = document.getElementById('settings-overlay');
+        if (settingsOvl && !settingsOvl.classList.contains('hidden')) return;
+        const dynamicModal = document.getElementById('dynamic-modal');
+        if (dynamicModal && !dynamicModal.classList.contains('hidden')) return;
+        const modalOvl = document.getElementById('modal-overlay');
+        if (modalOvl && !modalOvl.classList.contains('hidden')) return;
+
+        // Guard: don't intercept when focused on input/textarea/select
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        // --- ARROW UP / ARROW DOWN ---
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const items = getVisibleTreeItems();
+            if (items.length === 0) return;
+
+            if (selectedNodeId === null) {
+                const target = e.key === 'ArrowDown' ? items[0] : items[items.length - 1];
+                setSelectedNode(target.dataset.nodeId);
+                return;
+            }
+
+            const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(selectedNodeId));
+            if (currentIdx === -1) {
+                setSelectedNode(items[0].dataset.nodeId);
+                return;
+            }
+
+            let nextIdx;
+            if (e.key === 'ArrowDown') {
+                nextIdx = Math.min(currentIdx + 1, items.length - 1);
+            } else {
+                nextIdx = Math.max(currentIdx - 1, 0);
+            }
+            setSelectedNode(items[nextIdx].dataset.nodeId);
+            return;
+        }
+
+        // --- DELETE KEY ---
+        if (e.key === 'Delete') {
+            if (selectedNodeId === null) return;
+            e.preventDefault();
+
+            const node = findNode(treeData, selectedNodeId);
+            if (!node) return;
+
+            const items = getVisibleTreeItems();
+            const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(selectedNodeId));
+
+            const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
+            let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
+            if (node.type === 'folder' && node.children && node.children.length > 0) {
+                const childCount = countCommands(node.children);
+                const folderCount = countFolders(node.children);
+                const parts = [];
+                if (childCount > 0) parts.push(`${childCount} command${childCount !== 1 ? 's' : ''}`);
+                if (folderCount > 0) parts.push(`${folderCount} sub-folder${folderCount !== 1 ? 's' : ''}`);
+                if (parts.length > 0) message += ` This folder contains ${parts.join(' and ')}.`;
+            }
+
+            const deleteTargetId = selectedNodeId;
+            showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
+                if (confirmed) {
+                    execDelete(deleteTargetId);
+                    const newItems = getVisibleTreeItems();
+                    if (newItems.length > 0 && currentIdx >= 0) {
+                        setSelectedNode(newItems[Math.min(currentIdx, newItems.length - 1)].dataset.nodeId);
+                    } else {
+                        selectedNodeId = null;
+                    }
+                }
+            });
+            return;
+        }
+
+        // --- F2 KEY: Rename/Edit ---
+        if (e.key === 'F2') {
+            if (selectedNodeId === null) return;
+            e.preventDefault();
+            execEdit(selectedNodeId);
+            return;
+        }
+
+        // --- ENTER KEY: Toggle folder or copy command ---
+        if (e.key === 'Enter') {
+            if (selectedNodeId === null) return;
+            e.preventDefault();
+
+            const node = findNode(treeData, selectedNodeId);
+            if (!node) return;
+
+            if (node.type === 'folder') {
+                node.collapsed = !node.collapsed;
+                saveData();
+                refreshAll();
+            } else if (node.type === 'command') {
+                const el = document.querySelector(`.main-content .tree-item[data-node-id="${selectedNodeId}"]`);
+                const wrap = el ? el.querySelector('.cmd-wrapper') : null;
+                copyToClipboard(node.cmd, node.name, wrap);
+            }
+            return;
+        }
+
+        // --- ESCAPE KEY: Clear selection ---
+        if (e.key === 'Escape') {
+            if (selectedNodeId !== null) {
+                e.preventDefault();
+                setSelectedNode(null);
+            }
+            return;
+        }
+    });
+
     const themeSel = document.getElementById('theme-selector');
     if (themeSel) themeSel.onchange = (e) => {
         changeTheme(e.target.value);
@@ -666,7 +844,39 @@ function setupAppEvents() {
                 close();
             }
             else if (id === 'ctx-help-page') { openHelpPage(contextTargetId); close(); }
-            else if (id === 'ctx-delete') { if (confirm("Delete?")) execDelete(contextTargetId); close(); }
+            else if (id === 'ctx-delete') {
+                close();
+                const targetId = contextTargetId;
+                const node = findNode(treeData, targetId);
+                if (!node) return;
+                const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
+                let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
+                if (node.type === 'folder' && node.children && node.children.length > 0) {
+                    const childCount = countCommands(node.children);
+                    const folderCount = countFolders(node.children);
+                    const parts = [];
+                    if (childCount > 0) parts.push(`${childCount} command${childCount !== 1 ? 's' : ''}`);
+                    if (folderCount > 0) parts.push(`${folderCount} sub-folder${folderCount !== 1 ? 's' : ''}`);
+                    if (parts.length > 0) message += ` This folder contains ${parts.join(' and ')}.`;
+                }
+                showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
+                    if (confirmed) {
+                        if (String(selectedNodeId) === String(targetId)) {
+                            const items = getVisibleTreeItems();
+                            const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(targetId));
+                            execDelete(targetId);
+                            const newItems = getVisibleTreeItems();
+                            if (newItems.length > 0 && currentIdx >= 0) {
+                                setSelectedNode(newItems[Math.min(currentIdx, newItems.length - 1)].dataset.nodeId);
+                            } else {
+                                selectedNodeId = null;
+                            }
+                        } else {
+                            execDelete(targetId);
+                        }
+                    }
+                });
+            }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
             else if (id === 'ctx-add-cmd') { execAdd(contextTargetId, 'command'); close(); }
@@ -792,27 +1002,32 @@ function setupAppEvents() {
 
     // 3. Factory Reset
     bindClick('btn-reset', () => {
-        if (confirm("⚠️ DANGER ZONE \n\nAre you sure you want to delete ALL commands and history? This action cannot be undone.")) {
-            // Reiniciamos a estado limpio pero funcional (con una carpeta raíz)
-            treeData = [{
-                id: genId(),
-                name: "My Commands",
-                type: "folder",
-                children: [],
-                collapsed: false,
-                color: null
-            }];
-            commandHistory = [];
-
-            // Limpiamos storage y variables
-            chrome.storage.local.set({ linuxTree: treeData, linuxHistory: [] }, () => {
-                refreshAll();
-                showToast("🗑️ Factory Reset Complete");
-                // Opcional: Cerrar el panel de settings para ver el resultado
-                const settingsOverlay = document.getElementById('settings-overlay');
-                if (settingsOverlay) settingsOverlay.classList.add('hidden');
-            });
-        }
+        showConfirmModal({
+            title: 'Factory Reset?',
+            message: 'All commands, folders, and history will be permanently deleted. This action cannot be undone.',
+            confirmText: 'Reset Everything',
+            cancelText: 'Cancel',
+            icon: 'danger'
+        }).then(confirmed => {
+            if (confirmed) {
+                treeData = [{
+                    id: genId(),
+                    name: "My Commands",
+                    type: "folder",
+                    children: [],
+                    collapsed: false,
+                    color: null
+                }];
+                commandHistory = [];
+                selectedNodeId = null;
+                chrome.storage.local.set({ linuxTree: treeData, linuxHistory: [] }, () => {
+                    refreshAll();
+                    showToast("🗑️ Factory Reset Complete");
+                    const settingsOverlay = document.getElementById('settings-overlay');
+                    if (settingsOverlay) settingsOverlay.classList.add('hidden');
+                });
+            }
+        });
     });
 
 
@@ -1122,6 +1337,17 @@ function countCommands(nodes) {
     for (const n of nodes) {
         if (n.type === 'command') count++;
         if (n.children) count += countCommands(n.children);
+    }
+    return count;
+}
+
+function countFolders(nodes) {
+    let count = 0;
+    for (const n of nodes) {
+        if (n.type === 'folder') {
+            count++;
+            if (n.children) count += countFolders(n.children);
+        }
     }
     return count;
 }
@@ -1488,6 +1714,65 @@ function showToast(m) {
         if (toastTimeout) clearTimeout(toastTimeout);
         toastTimeout = setTimeout(() => e.classList.add('hidden'), 3000);
     }
+}
+
+// --- CUSTOM CONFIRM MODAL (Replaces native confirm()) ---
+
+function showConfirmModal(options) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('confirm-modal-overlay');
+        const titleEl = document.getElementById('confirm-modal-title');
+        const messageEl = document.getElementById('confirm-modal-message');
+        const iconEl = document.getElementById('confirm-modal-icon');
+        const confirmBtn = document.getElementById('confirm-modal-confirm');
+        const cancelBtn = document.getElementById('confirm-modal-cancel');
+
+        if (!overlay) { resolve(false); return; }
+
+        // Populate content
+        titleEl.textContent = options.title || 'Are you sure?';
+        messageEl.textContent = options.message || '';
+        confirmBtn.textContent = options.confirmText || 'Delete';
+        cancelBtn.textContent = options.cancelText || 'Cancel';
+
+        // Icon SVGs
+        const deleteIcon = `<svg viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+        const dangerIcon = `<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+        iconEl.innerHTML = options.icon === 'danger' ? dangerIcon : deleteIcon;
+
+        let resolved = false;
+        function cleanup(result) {
+            if (resolved) return;
+            resolved = true;
+            overlay.classList.add('hidden');
+            document.removeEventListener('keydown', onKeydown);
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlayClick);
+            resolve(result);
+        }
+
+        function onConfirm() { cleanup(true); }
+        function onCancel() { cleanup(false); }
+        function onOverlayClick(e) { if (e.target === overlay) cleanup(false); }
+        function onKeydown(e) {
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cleanup(false); }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                cleanup(document.activeElement === confirmBtn);
+            }
+        }
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeydown);
+
+        // Show modal and auto-focus Cancel for safety
+        overlay.classList.remove('hidden');
+        cancelBtn.focus();
+    });
 }
 
 // --- INYECCIÓN DE CONTEXT MENU (FIX) ---
