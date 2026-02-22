@@ -367,6 +367,50 @@ input[type="text"]#search-input:focus {
 .section-content { padding: 2px 0; }
 .section-content.collapsed { display: none; }
 
+/* Tag Cloud Panel */
+.tagcloud-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+}
+.tagcloud-chip {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.tagcloud-chip:hover {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.tagcloud-chip.active {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 8px var(--selection-bg);
+}
+.tagcloud-count {
+    font-size: 9px;
+    font-weight: 500;
+    opacity: 0.7;
+    margin-left: 2px;
+}
+
 /* History items — clean CSS classes */
 .history-item {
     display: flex;
@@ -1668,19 +1712,18 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     to   { opacity: 1; transform: scale(1); }
 }
 
-/* --- ANIMACIÓN DE CARPETAS OPCIÓN A --- */
+/* --- ANIMACIÓN DE CARPETAS (FIX: sin límite de altura) --- */
 
 .folder-content {
-    overflow: hidden !important;
-    /* Transición suave de altura y transparencia */
-    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
-    max-height: 1000px; /* Un valor alto para permitir el despliegue */
+    /* No max-height limit when open — allows unlimited commands per folder */
+    transition: opacity 0.25s ease-in-out !important;
     opacity: 1;
 }
 
 /* Estado cuando la carpeta está cerrada */
 .folder-content.collapsed {
     max-height: 0 !important;
+    overflow: hidden !important;
     opacity: 0 !important;
     pointer-events: none !important;
 }

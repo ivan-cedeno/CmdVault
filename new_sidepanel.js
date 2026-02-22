@@ -92,6 +92,7 @@ let commandHistory = [];
 let qaCollapsed = false;
 let historyCollapsed = false;
 let commandsCollapsed = false;
+let tagCloudCollapsed = false;
 let contextTargetId = null;
 let lastSelectedFolderId = null;
 let draggedId = null;
@@ -414,7 +415,35 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
             saveData();
             const content = wrapper.querySelector('.folder-content');
             if (content) {
-                content.classList.toggle('collapsed', node.collapsed);
+                if (node.collapsed) {
+                    // COLLAPSE: animate from current height to 0
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    content.style.overflow = 'hidden';
+                    content.offsetHeight; // trigger reflow
+                    content.style.transition = 'max-height 0.25s ease-in-out, opacity 0.25s ease-in-out';
+                    content.style.maxHeight = '0';
+                    content.style.opacity = '0';
+                    content.style.pointerEvents = 'none';
+                    content.classList.add('collapsed');
+                } else {
+                    // EXPAND: animate from 0 to actual height, then remove max-height
+                    content.classList.remove('collapsed');
+                    content.style.overflow = 'hidden';
+                    content.style.maxHeight = '0';
+                    content.style.opacity = '1';
+                    content.style.pointerEvents = '';
+                    content.offsetHeight; // trigger reflow
+                    content.style.transition = 'max-height 0.3s ease-in-out, opacity 0.25s ease-in-out';
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    // After animation completes, remove max-height so content can grow freely
+                    const onEnd = () => {
+                        content.style.maxHeight = '';
+                        content.style.overflow = '';
+                        content.style.transition = '';
+                        content.removeEventListener('transitionend', onEnd);
+                    };
+                    content.addEventListener('transitionend', onEnd);
+                }
                 iconSpan.innerHTML = node.collapsed ? iconClosed : iconOpen;
                 if (chevronSpan) chevronSpan.classList.toggle('expanded', !node.collapsed);
             }
