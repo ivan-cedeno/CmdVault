@@ -2077,8 +2077,13 @@ function highlightSyntax(c) {
     // 6. Operators and pipes (|, ||, &&, ;) — HTML entities are already protected as tokens
     text = text.replace(/\|\||&&|\||;/g, m => ph(m, 'sh-operator'));
 
-    // Restore tokens
-    text = text.replace(new RegExp(S + '(\\d+)' + E, 'g'), (_, i) => tokens[i]);
+    // Restore tokens (recursive for nested tokens — e.g. HTML entities inside quoted strings)
+    let maxIter = 10;
+    while (maxIter-- > 0) {
+        const restored = text.replace(new RegExp(S + '(\\d+)' + E, 'g'), (_, i) => tokens[i]);
+        if (restored === text) break;
+        text = restored;
+    }
     return text;
 }
 
