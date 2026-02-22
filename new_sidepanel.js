@@ -2061,18 +2061,21 @@ function highlightSyntax(c) {
     const S = '\uFDD0', E = '\uFDD1';
     const ph = (s, cls) => { const i = tokens.length; tokens.push(`<span class="${cls}">${s}</span>`); return S + i + E; };
 
+    // 0. Protect HTML entities from being broken by subsequent regex
+    text = text.replace(/&amp;|&lt;|&gt;/g, m => { const i = tokens.length; tokens.push(m); return S + i + E; });
+
     // 1. Strings (double and single quoted)
     text = text.replace(/"[^"]*"|'[^']*'/g, m => ph(m, 'sh-string'));
-    // 2. Comments (# to end of line)
-    text = text.replace(/#.*/g, m => ph(m, 'sh-comment'));
+    // 2. Comments (# to end of line, only when preceded by whitespace or at line start)
+    text = text.replace(/(^|\s)(#.*)/gm, (m, sp, comment) => sp + ph(comment, 'sh-comment'));
     // 3. Variables ($VAR, ${VAR})
     text = text.replace(/\$\{[^}]+\}|\$\w+/g, m => ph(m, 'sh-variable'));
     // 4. Keywords (shell builtins, common commands, devops tools)
     text = text.replace(/\b(if|then|else|elif|fi|for|do|done|while|case|esac|function|return|exit|echo|printf|export|source|alias|unalias|sudo|cd|ls|grep|egrep|awk|sed|cat|mkdir|rm|rmdir|cp|mv|chmod|chown|curl|wget|ssh|scp|rsync|docker|kubectl|az|aws|gcloud|apt|yum|dnf|pip|pip3|npm|npx|yarn|git|systemctl|journalctl|tar|zip|unzip|find|xargs|sort|uniq|wc|head|tail|tee|nohup|cron|crontab|set|unset|eval|exec|trap|wait|read|test|true|false|shift|local|declare|typeset|readonly|select|until|break|continue|bteq|mload|fastload|tpt|tdput|python|python3|node|java|go|make|cmake|gcc|npm|which|whereis|whoami|hostname|uname|df|du|ps|top|htop|kill|killall|ping|traceroute|netstat|ss|iptables|mount|umount|ln|touch|nano|vi|vim|less|more|env|printenv)\b/g, m => ph(m, 'sh-keyword'));
     // 5. Flags (-flag, --long-flag)
     text = text.replace(/(\s)(-[\w-]+)/g, (m, sp, flag) => sp + ph(flag, 'sh-flag'));
-    // 6. Operators and pipes (|, ||, &&, ;, >, >>, <, 2>&1)
-    text = text.replace(/[|&]{1,2}|[><]+|2&gt;&amp;1|;/g, m => ph(m, 'sh-operator'));
+    // 6. Operators and pipes (|, ||, &&, ;) — HTML entities are already protected as tokens
+    text = text.replace(/\|\||&&|\||;/g, m => ph(m, 'sh-operator'));
 
     // Restore tokens
     text = text.replace(new RegExp(S + '(\\d+)' + E, 'g'), (_, i) => tokens[i]);
