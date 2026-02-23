@@ -516,9 +516,9 @@ input[type="text"]#search-input:focus {
    ELEMENTOS DEL ÁRBOL
    ========================================= */
 .tree-item {
-    padding: 4px 8px; margin: 2px 0; border-radius: var(--radius-sm);
+    padding: 3px 6px; margin: 1px 0; border-radius: var(--radius-sm);
     cursor: pointer; transition: background 0.15s, border 0.15s, box-shadow 0.15s, opacity 0.2s;
-    border: 2px solid transparent; /* Bordes base */
+    border: 2px solid transparent;
     display: flex; flex-direction: column;
 }
 
@@ -593,7 +593,10 @@ input[type="text"]#search-input:focus {
     background-color: var(--md-sys-color-surface-container-high) !important;
 }
 
-.item-header { display: flex; align-items: center; font-size: 0.85rem; padding: 4px; color: var(--md-sys-color-on-surface); }
+.item-header { display: flex; align-items: center; font-size: 0.875rem; padding: 3px 4px; color: var(--md-sys-color-on-surface); }
+.node-name { font-weight: 500; letter-spacing: 0.01em; }
+.cmd-icon { color: var(--md-sys-color-primary); opacity: 0.7; transition: opacity 0.15s ease; }
+.tree-item:hover .cmd-icon { opacity: 1; }
 
 /* Drag handle — grip dots visible on hover */
 .drag-handle {
@@ -1533,32 +1536,30 @@ body.theme-nord .sh-number   { color: #B48EAD; }
 
 /* 1. EL CONTENEDOR PRINCIPAL (LA TARJETA) */
 .cmd-wrapper {
-    position: relative; /* Necesario para posicionar el botón de copia adentro */
+    position: relative;
     display: flex;
     flex-direction: column;
-    
+
     /* Estilo "Cyber-Glass" */
-    background: rgba(15, 23, 42, 0.3); /* Fondo oscuro muy translúcido */
-    border: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.08)); /* Borde casi invisible */
-    border-radius: 12px; /* Esquinas muy redondeadas (estilo moderno) */
-    
-    /* Espaciado y Márgenes */
-    margin: 8px 0 8px 12px; /* Alejado del borde izquierdo para jerarquía */
-    padding: 12px 14px; /* Padding interno cómodo para que el texto respire */
-    
-    /* Transición suave para el efecto hover */
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+
+    /* Compact spacing */
+    margin: 6px 0 6px 12px;
+    padding: 10px 12px;
+
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Efecto Hover: La tarjeta "despierta" */
 .cmd-wrapper:hover {
-    background: rgba(15, 23, 42, 0.5); /* Un poco más opaco */
-    border-color: var(--md-sys-color-primary); /* El borde toma el color del tema */
-    
-    /* Resplandor suave dinámico (igual que el search box) */
-    box-shadow: 0 0 12px var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.15));
-    
-    transform: translateY(-1px); /* Sutil efecto de levitación */
+    background: rgba(15, 23, 42, 0.5);
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 16px var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.2));
+    transform: translateY(-1px);
 }
 
 /* 2. EL ÁREA DE CÓDIGO (TEXTO) */
@@ -1567,34 +1568,37 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     background: transparent !important;
     border: none !important;
     font-family: var(--font-code);
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.5;
     color: var(--md-sys-color-on-surface, #e2e8f0);
     padding: 0 !important;
     margin: 0 !important;
-    
-    /* EL ESPACIO DE SEGURIDAD: 
-       Evita que el texto tape el botón en la esquina */
     padding-right: 70px !important;
-    
-    /* Efecto de recorte con puntos suspensivos (...) */
+
+    /* Collapsed: single line with ellipsis */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    
+    max-height: 20px;
+
     cursor: pointer;
     position: relative;
-    z-index: 1; /* Por debajo del botón (que tiene 999) */
+    z-index: 1;
 }
 
 /* 2. ESTADO EXPANDIDO: Se activa al hacer clic en el chevron */
 .cmd-preview.expanded {
-    white-space: pre-wrap !important; /* Permite saltos de línea */
-    word-break: break-all !important;  /* Evita que el texto se salga */
-    overflow: visible !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
     text-overflow: clip !important;
-    max-height: none !important;       /* Permite que la tarjeta crezca */
+    max-height: 150px !important;
+    overflow-y: auto !important;
 }
+/* Custom scrollbar for expanded preview */
+.cmd-preview.expanded::-webkit-scrollbar { width: 4px; }
+.cmd-preview.expanded::-webkit-scrollbar-track { background: transparent; }
+.cmd-preview.expanded::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant, rgba(255,255,255,0.15)); border-radius: 4px; }
+.cmd-preview.expanded::-webkit-scrollbar-thumb:hover { background: var(--md-sys-color-outline, rgba(255,255,255,0.3)); }
 
 /* Estilo para el resaltado de sintaxis (ajusta los colores si es necesario) */
 .syntax-highlight {
@@ -1607,25 +1611,22 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     position: absolute;
     top: 8px;
     right: 8px;
-    
+
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     width: 26px;
     height: 26px;
-    border-radius: 6px;
-    
-    /* Fondo sutil que se mezcla con la tarjeta */
+    border-radius: 50%;
+
     background: rgba(255,255,255,0.03);
     color: var(--md-sys-color-on-surface-variant);
-    
+
     cursor: pointer;
     transition: all 0.2s ease;
     opacity: 0.7;
-    
-    /* --- ESTA ES LA LÍNEA QUE ARREGLA EL CLIC --- */
-    z-index: 10; /* Trae el botón al frente, sobre el texto */
+    z-index: 10;
 }
 
 .cmd-wrapper:hover .cmd-ctrl-btn {
@@ -1917,12 +1918,13 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     margin-right: 2px;
     flex-shrink: 0;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0.5;
+    border-radius: 50%;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    opacity: 0.6;
     color: var(--md-sys-color-on-surface-variant);
 }
 
@@ -1932,11 +1934,21 @@ body.theme-nord .sh-number   { color: #B48EAD; }
 
 .tree-chevron.expanded {
     transform: rotate(90deg);
+    color: var(--md-sys-color-primary);
+}
+
+.tree-chevron:hover {
+    background: var(--md-sys-color-surface-container-high);
 }
 
 .item-header:hover .tree-chevron {
     opacity: 1;
     color: var(--md-sys-color-primary);
+    transform: scale(1.1);
+}
+
+.item-header:hover .tree-chevron.expanded {
+    transform: rotate(90deg) scale(1.1);
 }
 
 /* ==========================================================================

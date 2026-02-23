@@ -579,10 +579,13 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
             iconSpan.innerHTML = '🔗';
         } else {
             iconSpan.innerHTML = resolveIcon(node.icon);
+            // Add accent class to default command icon (terminal >_)
+            if (isDefaultIcon) iconSpan.classList.add('cmd-icon');
         }
     }
 
     const nameSpan = document.createElement('span');
+    nameSpan.className = 'node-name';
     const nameText = node.name || "Untitled";
 
     if (filter && filter.trim() !== "") {
@@ -786,8 +789,8 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         }
 
         inner.style.borderLeft = "1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1))";
-        inner.style.marginLeft = "12px";
-        inner.style.paddingLeft = "8px";
+        inner.style.marginLeft = "10px";
+        inner.style.paddingLeft = "6px";
 
         // PUNTO 3: Propagación del ADN de color hacia los hijos
         node.children.forEach(child => {
