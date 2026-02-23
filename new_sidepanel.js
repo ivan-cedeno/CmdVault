@@ -1319,6 +1319,7 @@ function setupAppEvents() {
                 showMoveToFolderModal();
             }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
+            else if (id === 'ctx-duplicate') { execDuplicate(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
             else if (id === 'ctx-add-cmd') { execAdd(contextTargetId, 'command'); close(); }
             else if (target.classList.contains('icon-option')) {
@@ -1658,6 +1659,32 @@ function execPaste() {
         refreshAll();
         showToast("✅ Pasted");
     }
+}
+
+/**
+ * Duplicates a node (command or folder) and inserts the copy right after the original.
+ */
+function execDuplicate(id) {
+    const node = findNode(treeData, id);
+    if (!node) return;
+
+    const parentList = findParentList(treeData, id);
+    if (!parentList) return;
+
+    pushUndoState(`Duplicate: ${node.name || 'Untitled'}`);
+
+    const copy = cloneNode(node);
+    copy.name = `${node.name || 'Untitled'} (copy)`;
+    if (copy.pinned) copy.pinned = false; // Don't duplicate pin status
+
+    // Insert right after original
+    const idx = parentList.findIndex(n => String(n.id) === String(id));
+    parentList.splice(idx + 1, 0, copy);
+
+    saveData();
+    refreshAll();
+    setSelectedNode(copy.id);
+    showToast(`📄 Duplicated: ${node.name || 'Untitled'}`);
 }
 
 function execDelete(id) {
@@ -2504,6 +2531,7 @@ function openContextMenu(e, node) {
         setVisibility('ctx-cut', false, 'flex');
         setVisibility('ctx-paste', false, 'flex');
         setVisibility('ctx-edit', false, 'flex');
+        setVisibility('ctx-duplicate', false, 'flex');
         setVisibility('ctx-help-page', false, 'flex');
 
         // Show multi-select header
@@ -2534,6 +2562,7 @@ function openContextMenu(e, node) {
         setVisibility('ctx-copy', true, 'flex');
         setVisibility('ctx-cut', true, 'flex');
         setVisibility('ctx-edit', true, 'flex');
+        setVisibility('ctx-duplicate', true, 'flex');
 
         // A. Sección de CARPETAS: Visible solo si es carpeta
         setVisibility('ctx-folder-section', isFolder, 'block');
