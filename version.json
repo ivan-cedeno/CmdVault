@@ -1,6 +1,6 @@
 {
   "version": "3.0.2",
   "changelog": "New: Auto-update checker, improved UI density, command tooltips on hover, full ARIA accessibility support",
-  "download_url": "https://github.com/ivan-cedeno/CmdVault/releases/latest/download/CmdVault.zip",
+  "download_url": "https://github.com/ivan-cedeno/CmdVault/archive/refs/heads/main.zip",
   "date": "2026-02-23"
 }
