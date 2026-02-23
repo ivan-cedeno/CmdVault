@@ -104,7 +104,9 @@ let isDataLoaded = false;
 let inlineEditState = null; // { id, mode: 'edit'|'add', type, parentId, originalNode, formElement }
 let helpPageState = null; // { nodeId, isEditing }
 let allExpanded = false; // toggle state for expand/collapse all
-let selectedNodeId = null; // Currently keyboard-selected tree item ID
+let selectedNodeId = null; // Currently keyboard-selected tree item ID (primary/last-clicked)
+let selectedNodeIds = new Set(); // Multi-select: all currently selected node IDs
+let selectionAnchorId = null; // Shift+Click range anchor
 
 // --- URL DETECTION ---
 const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
@@ -406,9 +408,29 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         header.appendChild(tagsDiv);
     }
 
-    header.onclick = () => {
+    header.onclick = (e) => {
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
+
+        // Multi-select: Ctrl+Click toggles, Shift+Click selects range
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+
+        if (isCtrl) {
+            // Ctrl+Click: toggle this node in the selection set
+            toggleNodeSelection(node.id);
+            if (node.type === 'folder') lastSelectedFolderId = node.id;
+            return; // Don't toggle folder collapse on Ctrl+Click
+        } else if (isShift) {
+            // Shift+Click: select range from anchor to this node
+            e.preventDefault();
+            selectNodeRange(node.id);
+            if (node.type === 'folder') lastSelectedFolderId = node.id;
+            return; // Don't toggle folder collapse on Shift+Click
+        }
+
+        // Plain click: single select
         setSelectedNode(node.id);
+
         if (node.type === 'folder' && !isFav) {
             lastSelectedFolderId = node.id;
             node.collapsed = !node.collapsed;
@@ -454,7 +476,12 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         e.preventDefault();
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
         contextTargetId = node.id;
-        setSelectedNode(node.id);
+        // If right-clicking a node that's already in the multi-selection, keep the multi-selection
+        if (!selectedNodeIds.has(String(node.id))) {
+            setSelectedNode(node.id);
+        } else {
+            selectedNodeId = String(node.id);
+        }
         if (node.type === 'folder') lastSelectedFolderId = node.id;
         openContextMenu(e, node);
     };
@@ -534,18 +561,150 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
 //  KEYBOARD SELECTION STATE
 // ==========================================================================
 
+/**
+ * Sets a single selected node (clears multi-select).
+ * Used for plain clicks and keyboard navigation.
+ */
 function setSelectedNode(id) {
-    const prev = document.querySelector('.tree-item.selected');
-    if (prev) prev.classList.remove('selected');
+    clearSelectionStyles();
+    selectedNodeIds.clear();
 
     selectedNodeId = id;
-    if (id === null) return;
+    if (id === null) {
+        selectionAnchorId = null;
+        updateSelectionBadge();
+        return;
+    }
+
+    selectedNodeIds.add(String(id));
+    selectionAnchorId = String(id);
 
     const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
     if (el) {
         el.classList.add('selected');
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
+    updateSelectionBadge();
+}
+
+/**
+ * Toggles a node in/out of multi-selection (Ctrl+Click).
+ */
+function toggleNodeSelection(id) {
+    const strId = String(id);
+    if (selectedNodeIds.has(strId)) {
+        selectedNodeIds.delete(strId);
+        const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
+        if (el) el.classList.remove('selected');
+        // Update primary selectedNodeId
+        if (selectedNodeIds.size > 0) {
+            selectedNodeId = [...selectedNodeIds][selectedNodeIds.size - 1];
+        } else {
+            selectedNodeId = null;
+            selectionAnchorId = null;
+        }
+    } else {
+        selectedNodeIds.add(strId);
+        selectedNodeId = strId;
+        selectionAnchorId = strId;
+        const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
+        if (el) {
+            el.classList.add('selected');
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+    updateSelectionBadge();
+}
+
+/**
+ * Selects a range of nodes from anchor to target (Shift+Click).
+ */
+function selectNodeRange(targetId) {
+    const items = getVisibleTreeItems();
+    if (items.length === 0) return;
+
+    const anchorId = selectionAnchorId || selectedNodeId;
+    if (!anchorId) {
+        setSelectedNode(targetId);
+        return;
+    }
+
+    const anchorIdx = items.findIndex(el => String(el.dataset.nodeId) === String(anchorId));
+    const targetIdx = items.findIndex(el => String(el.dataset.nodeId) === String(targetId));
+
+    if (anchorIdx === -1 || targetIdx === -1) {
+        setSelectedNode(targetId);
+        return;
+    }
+
+    const start = Math.min(anchorIdx, targetIdx);
+    const end = Math.max(anchorIdx, targetIdx);
+
+    clearSelectionStyles();
+    selectedNodeIds.clear();
+
+    for (let i = start; i <= end; i++) {
+        const nodeId = items[i].dataset.nodeId;
+        selectedNodeIds.add(String(nodeId));
+        items[i].classList.add('selected');
+    }
+
+    selectedNodeId = String(targetId);
+    // Keep selectionAnchorId unchanged (stays at original anchor)
+    updateSelectionBadge();
+}
+
+/**
+ * Select all visible tree items (Ctrl+A).
+ */
+function selectAllNodes() {
+    const items = getVisibleTreeItems();
+    if (items.length === 0) return;
+
+    clearSelectionStyles();
+    selectedNodeIds.clear();
+
+    items.forEach(el => {
+        const nodeId = el.dataset.nodeId;
+        selectedNodeIds.add(String(nodeId));
+        el.classList.add('selected');
+    });
+
+    selectedNodeId = [...selectedNodeIds][selectedNodeIds.size - 1];
+    updateSelectionBadge();
+}
+
+/**
+ * Clear all selection visual styles from DOM.
+ */
+function clearSelectionStyles() {
+    document.querySelectorAll('.tree-item.selected').forEach(el => el.classList.remove('selected'));
+}
+
+/**
+ * Updates the floating selection count badge.
+ */
+function updateSelectionBadge() {
+    let badge = document.getElementById('multi-select-badge');
+    if (selectedNodeIds.size <= 1) {
+        if (badge) badge.classList.add('hidden');
+        return;
+    }
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'multi-select-badge';
+        badge.className = 'multi-select-badge';
+        document.body.appendChild(badge);
+    }
+    badge.textContent = `${selectedNodeIds.size} selected`;
+    badge.classList.remove('hidden');
+}
+
+/**
+ * Check if there is an active multi-selection (more than 1 item).
+ */
+function isMultiSelect() {
+    return selectedNodeIds.size > 1;
 }
 
 function getVisibleTreeItems() {
@@ -571,13 +730,35 @@ function getVisibleTreeItems() {
 }
 
 function restoreSelection() {
-    if (selectedNodeId === null) return;
-    const el = document.querySelector(`.main-content .tree-item[data-node-id="${selectedNodeId}"]`);
-    if (el) {
-        el.classList.add('selected');
-    } else {
-        selectedNodeId = null;
+    if (selectedNodeIds.size === 0 && selectedNodeId === null) return;
+
+    // Restore multi-select state
+    if (selectedNodeIds.size > 0) {
+        const validIds = new Set();
+        selectedNodeIds.forEach(id => {
+            const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
+            if (el) {
+                el.classList.add('selected');
+                validIds.add(id);
+            }
+        });
+        selectedNodeIds = validIds;
+        if (selectedNodeIds.size === 0) {
+            selectedNodeId = null;
+            selectionAnchorId = null;
+        } else if (!selectedNodeIds.has(String(selectedNodeId))) {
+            selectedNodeId = [...selectedNodeIds][selectedNodeIds.size - 1];
+        }
+    } else if (selectedNodeId !== null) {
+        const el = document.querySelector(`.main-content .tree-item[data-node-id="${selectedNodeId}"]`);
+        if (el) {
+            el.classList.add('selected');
+            selectedNodeIds.add(String(selectedNodeId));
+        } else {
+            selectedNodeId = null;
+        }
     }
+    updateSelectionBadge();
 }
 
 // --- SETUP EVENTOS ---
@@ -717,7 +898,7 @@ function setupAppEvents() {
     });
 
     // ==========================================================================
-    //  GLOBAL KEYBOARD SHORTCUTS (↑↓ navigation, Delete, F2, Enter, Escape)
+    //  GLOBAL KEYBOARD SHORTCUTS (↑↓ navigation, Delete, F2, Enter, Escape, Ctrl+A)
     // ==========================================================================
     document.addEventListener('keydown', (e) => {
         // Guard: block during inline edit, help page, or modals
@@ -736,6 +917,13 @@ function setupAppEvents() {
         // Guard: don't intercept when focused on input/textarea/select
         const tag = document.activeElement?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        // --- CTRL+A: Select all visible items ---
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            e.preventDefault();
+            selectAllNodes();
+            return;
+        }
 
         // --- ARROW UP / ARROW DOWN ---
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -761,58 +949,73 @@ function setupAppEvents() {
             } else {
                 nextIdx = Math.max(currentIdx - 1, 0);
             }
-            setSelectedNode(items[nextIdx].dataset.nodeId);
+
+            if (e.shiftKey) {
+                // Shift+Arrow: extend selection range
+                selectNodeRange(items[nextIdx].dataset.nodeId);
+            } else {
+                // Plain arrow: single select (clears multi-select)
+                setSelectedNode(items[nextIdx].dataset.nodeId);
+            }
             return;
         }
 
         // --- DELETE KEY ---
         if (e.key === 'Delete') {
-            if (selectedNodeId === null) return;
+            if (selectedNodeId === null && selectedNodeIds.size === 0) return;
             e.preventDefault();
 
-            const node = findNode(treeData, selectedNodeId);
-            if (!node) return;
+            if (isMultiSelect()) {
+                // Multi-delete
+                execDeleteMultiple();
+            } else {
+                // Single delete (legacy behavior)
+                const node = findNode(treeData, selectedNodeId);
+                if (!node) return;
 
-            const items = getVisibleTreeItems();
-            const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(selectedNodeId));
+                const items = getVisibleTreeItems();
+                const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(selectedNodeId));
 
-            const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
-            let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
-            if (node.type === 'folder' && node.children && node.children.length > 0) {
-                const childCount = countCommands(node.children);
-                const folderCount = countFolders(node.children);
-                const parts = [];
-                if (childCount > 0) parts.push(`${childCount} command${childCount !== 1 ? 's' : ''}`);
-                if (folderCount > 0) parts.push(`${folderCount} sub-folder${folderCount !== 1 ? 's' : ''}`);
-                if (parts.length > 0) message += ` This folder contains ${parts.join(' and ')}.`;
-            }
-
-            const deleteTargetId = selectedNodeId;
-            showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
-                if (confirmed) {
-                    execDelete(deleteTargetId);
-                    const newItems = getVisibleTreeItems();
-                    if (newItems.length > 0 && currentIdx >= 0) {
-                        setSelectedNode(newItems[Math.min(currentIdx, newItems.length - 1)].dataset.nodeId);
-                    } else {
-                        selectedNodeId = null;
-                    }
+                const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
+                let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
+                if (node.type === 'folder' && node.children && node.children.length > 0) {
+                    const childCount = countCommands(node.children);
+                    const folderCount = countFolders(node.children);
+                    const parts = [];
+                    if (childCount > 0) parts.push(`${childCount} command${childCount !== 1 ? 's' : ''}`);
+                    if (folderCount > 0) parts.push(`${folderCount} sub-folder${folderCount !== 1 ? 's' : ''}`);
+                    if (parts.length > 0) message += ` This folder contains ${parts.join(' and ')}.`;
                 }
-            });
+
+                const deleteTargetId = selectedNodeId;
+                showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
+                    if (confirmed) {
+                        execDelete(deleteTargetId);
+                        const newItems = getVisibleTreeItems();
+                        if (newItems.length > 0 && currentIdx >= 0) {
+                            setSelectedNode(newItems[Math.min(currentIdx, newItems.length - 1)].dataset.nodeId);
+                        } else {
+                            selectedNodeId = null;
+                            selectedNodeIds.clear();
+                            updateSelectionBadge();
+                        }
+                    }
+                });
+            }
             return;
         }
 
-        // --- F2 KEY: Rename/Edit ---
+        // --- F2 KEY: Rename/Edit (only with single selection) ---
         if (e.key === 'F2') {
-            if (selectedNodeId === null) return;
+            if (selectedNodeId === null || isMultiSelect()) return;
             e.preventDefault();
             execEdit(selectedNodeId);
             return;
         }
 
-        // --- ENTER KEY: Toggle folder or copy command ---
+        // --- ENTER KEY: Toggle folder or copy command (only with single selection) ---
         if (e.key === 'Enter') {
-            if (selectedNodeId === null) return;
+            if (selectedNodeId === null || isMultiSelect()) return;
             e.preventDefault();
 
             const node = findNode(treeData, selectedNodeId);
@@ -832,7 +1035,7 @@ function setupAppEvents() {
 
         // --- ESCAPE KEY: Clear selection ---
         if (e.key === 'Escape') {
-            if (selectedNodeId !== null) {
+            if (selectedNodeId !== null || selectedNodeIds.size > 0) {
                 e.preventDefault();
                 setSelectedNode(null);
             }
@@ -850,6 +1053,18 @@ function setupAppEvents() {
         if (!e.target.closest('.context-menu')) {
             const cm = document.getElementById('context-menu');
             if (cm) cm.classList.add('hidden');
+        }
+
+        // Deselect all when clicking on empty area (not on a tree item, context menu, modal, or dynamic-modal)
+        if (!e.target.closest('.tree-item') &&
+            !e.target.closest('.context-menu') &&
+            !e.target.closest('.modal-overlay') &&
+            !e.target.closest('#dynamic-modal') &&
+            !e.target.closest('#confirm-modal-overlay') &&
+            !e.target.closest('.section-header') &&
+            !e.target.closest('#settings-overlay') &&
+            (selectedNodeId !== null || selectedNodeIds.size > 0)) {
+            setSelectedNode(null);
         }
     });
 
@@ -883,36 +1098,47 @@ function setupAppEvents() {
             else if (id === 'ctx-help-page') { openHelpPage(contextTargetId); close(); }
             else if (id === 'ctx-delete') {
                 close();
-                const targetId = contextTargetId;
-                const node = findNode(treeData, targetId);
-                if (!node) return;
-                const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
-                let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
-                if (node.type === 'folder' && node.children && node.children.length > 0) {
-                    const childCount = countCommands(node.children);
-                    const folderCount = countFolders(node.children);
-                    const parts = [];
-                    if (childCount > 0) parts.push(`${childCount} command${childCount !== 1 ? 's' : ''}`);
-                    if (folderCount > 0) parts.push(`${folderCount} sub-folder${folderCount !== 1 ? 's' : ''}`);
-                    if (parts.length > 0) message += ` This folder contains ${parts.join(' and ')}.`;
-                }
-                showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
-                    if (confirmed) {
-                        if (String(selectedNodeId) === String(targetId)) {
-                            const items = getVisibleTreeItems();
-                            const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(targetId));
-                            execDelete(targetId);
-                            const newItems = getVisibleTreeItems();
-                            if (newItems.length > 0 && currentIdx >= 0) {
-                                setSelectedNode(newItems[Math.min(currentIdx, newItems.length - 1)].dataset.nodeId);
-                            } else {
-                                selectedNodeId = null;
-                            }
-                        } else {
-                            execDelete(targetId);
-                        }
+                if (isMultiSelect()) {
+                    // Multi-select batch delete
+                    execDeleteMultiple();
+                } else {
+                    const targetId = contextTargetId;
+                    const node = findNode(treeData, targetId);
+                    if (!node) return;
+                    const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
+                    let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
+                    if (node.type === 'folder' && node.children && node.children.length > 0) {
+                        const childCount = countCommands(node.children);
+                        const folderCount = countFolders(node.children);
+                        const parts = [];
+                        if (childCount > 0) parts.push(`${childCount} command${childCount !== 1 ? 's' : ''}`);
+                        if (folderCount > 0) parts.push(`${folderCount} sub-folder${folderCount !== 1 ? 's' : ''}`);
+                        if (parts.length > 0) message += ` This folder contains ${parts.join(' and ')}.`;
                     }
-                });
+                    showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
+                        if (confirmed) {
+                            if (selectedNodeIds.has(String(targetId))) {
+                                const items = getVisibleTreeItems();
+                                const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(targetId));
+                                execDelete(targetId);
+                                const newItems = getVisibleTreeItems();
+                                if (newItems.length > 0 && currentIdx >= 0) {
+                                    setSelectedNode(newItems[Math.min(currentIdx, newItems.length - 1)].dataset.nodeId);
+                                } else {
+                                    selectedNodeId = null;
+                                    selectedNodeIds.clear();
+                                    updateSelectionBadge();
+                                }
+                            } else {
+                                execDelete(targetId);
+                            }
+                        }
+                    });
+                }
+            }
+            else if (id === 'ctx-move-to-folder') {
+                close();
+                showMoveToFolderModal();
             }
             else if (id === 'ctx-edit') { execEdit(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
@@ -1057,6 +1283,9 @@ function setupAppEvents() {
                 }];
                 commandHistory = [];
                 selectedNodeId = null;
+                selectedNodeIds.clear();
+                selectionAnchorId = null;
+                updateSelectionBadge();
                 chrome.storage.local.set({ linuxTree: treeData, linuxHistory: [] }, () => {
                     refreshAll();
                     showToast("🗑️ Factory Reset Complete");
@@ -1088,12 +1317,24 @@ function attachDragEvents(row, node) {
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) { e.preventDefault(); return; }
         draggedId = node.id;
         e.dataTransfer.effectAllowed = 'copyMove';
-        e.dataTransfer.setData('text/plain', String(node.id));
-        row.classList.add('dragging');
+
+        // If dragging a selected item in multi-select, drag all selected items
+        if (isMultiSelect() && selectedNodeIds.has(String(node.id))) {
+            e.dataTransfer.setData('text/plain', [...selectedNodeIds].join(','));
+            // Add dragging class to all selected items
+            selectedNodeIds.forEach(id => {
+                const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
+                if (el) el.classList.add('dragging');
+            });
+        } else {
+            e.dataTransfer.setData('text/plain', String(node.id));
+            row.classList.add('dragging');
+        }
     };
 
     row.ondragend = () => {
-        row.classList.remove('dragging');
+        // Remove dragging class from all items (handles multi-select case)
+        document.querySelectorAll('.tree-item.dragging').forEach(el => el.classList.remove('dragging'));
         draggedId = null;
         clearDragStyles();
     };
@@ -1148,7 +1389,13 @@ function attachDragEvents(row, node) {
                 else if (isCommand || offsetY > (h - threshold)) action = 'after';
                 else action = 'inside';
             }
-            performMove(sourceId, node.id, action);
+
+            // Multi-select drag: move all selected items if the dragged item was selected
+            if (isMultiSelect() && selectedNodeIds.has(String(sourceId)) && !selectedNodeIds.has(String(node.id))) {
+                performMoveMultiple(node.id, action);
+            } else {
+                performMove(sourceId, node.id, action);
+            }
         }
     };
 }
@@ -1240,6 +1487,183 @@ function execDelete(id) {
             refreshAll();
         }
     }
+}
+
+/**
+ * Batch delete all items in selectedNodeIds.
+ * Shows a confirmation modal, then deletes all in one pass.
+ */
+function execDeleteMultiple() {
+    const count = selectedNodeIds.size;
+    if (count === 0) return;
+    if (count === 1) {
+        // Fallback to single delete flow
+        const singleId = [...selectedNodeIds][0];
+        const node = findNode(treeData, singleId);
+        if (!node) return;
+        const title = node.type === 'folder' ? 'Delete Folder?' : 'Delete Command?';
+        let message = `"${node.name || 'Untitled'}" will be permanently deleted.`;
+        showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
+            if (confirmed) {
+                execDelete(singleId);
+                setSelectedNode(null);
+            }
+        });
+        return;
+    }
+
+    // Build summary for confirmation
+    let folderCount = 0, cmdCount = 0;
+    selectedNodeIds.forEach(id => {
+        const n = findNode(treeData, id);
+        if (n) {
+            if (n.type === 'folder') folderCount++;
+            else cmdCount++;
+        }
+    });
+
+    const parts = [];
+    if (cmdCount > 0) parts.push(`${cmdCount} command${cmdCount !== 1 ? 's' : ''}`);
+    if (folderCount > 0) parts.push(`${folderCount} folder${folderCount !== 1 ? 's' : ''}`);
+
+    const title = `Delete ${count} items?`;
+    const message = `${parts.join(' and ')} will be permanently deleted.`;
+
+    const idsToDelete = new Set(selectedNodeIds);
+
+    showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
+        if (confirmed) {
+            // Delete from leaves up — use recursive removal to avoid parent-child conflicts
+            deleteNodesFromTree(treeData, idsToDelete);
+            saveData();
+            setSelectedNode(null);
+            refreshAll();
+            showToast(`🗑️ Deleted ${count} items`);
+        }
+    });
+}
+
+/**
+ * Recursively removes all nodes with IDs in the idsSet from the tree.
+ * Handles nested structures correctly (if a parent is deleted, children go with it).
+ */
+function deleteNodesFromTree(nodes, idsSet) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        if (idsSet.has(String(nodes[i].id))) {
+            nodes.splice(i, 1);
+        } else if (nodes[i].children && nodes[i].type === 'folder') {
+            deleteNodesFromTree(nodes[i].children, idsSet);
+        }
+    }
+}
+
+/**
+ * Batch move: moves all selected nodes into a target folder.
+ */
+function performMoveMultiple(targetId, action) {
+    const idsToMove = [...selectedNodeIds].filter(id => String(id) !== String(targetId));
+    if (idsToMove.length === 0) return;
+
+    // Collect nodes first, then remove, then insert
+    const nodesToMove = [];
+    idsToMove.forEach(id => {
+        const node = findNode(treeData, id);
+        if (node) nodesToMove.push({ id, node: JSON.parse(JSON.stringify(node)) });
+    });
+
+    // Remove originals (reverse to avoid index shifts)
+    const idsSet = new Set(idsToMove.map(String));
+    deleteNodesFromTree(treeData, idsSet);
+
+    // Insert at target
+    if (action === 'inside') {
+        const target = findNode(treeData, targetId);
+        if (target && target.type === 'folder') {
+            if (!target.children) target.children = [];
+            nodesToMove.forEach(item => target.children.push(item.node));
+            target.collapsed = false;
+        } else {
+            nodesToMove.forEach(item => treeData.push(item.node));
+        }
+    } else {
+        const targetList = findParentList(treeData, targetId);
+        if (targetList) {
+            const targetIdx = targetList.findIndex(n => String(n.id) === String(targetId));
+            const insertIdx = action === 'after' ? targetIdx + 1 : targetIdx;
+            // Insert in order
+            for (let i = 0; i < nodesToMove.length; i++) {
+                targetList.splice(insertIdx + i, 0, nodesToMove[i].node);
+            }
+        } else {
+            nodesToMove.forEach(item => treeData.push(item.node));
+        }
+    }
+
+    saveData();
+    setSelectedNode(null);
+    refreshAll();
+    showToast(`📦 Moved ${nodesToMove.length} items`);
+}
+
+/**
+ * Shows a modal to pick a destination folder for batch move.
+ * Lists all folders in the tree (excluding selected items).
+ */
+function showMoveToFolderModal() {
+    const folders = [];
+    const selectedIds = new Set(selectedNodeIds);
+
+    function collectFolders(nodes, path = '') {
+        nodes.forEach(n => {
+            if (n.type === 'folder' && !selectedIds.has(String(n.id))) {
+                folders.push({ id: n.id, name: path + n.name });
+                if (n.children) collectFolders(n.children, path + n.name + ' / ');
+            }
+        });
+    }
+    collectFolders(treeData);
+
+    if (folders.length === 0) {
+        showToast("⚠️ No destination folders available");
+        return;
+    }
+
+    // Build a simple selection list using the dynamic modal
+    const modal = document.getElementById('dynamic-modal');
+    if (!modal) return;
+
+    let html = `<div style="padding: 16px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 14px; color: var(--md-sys-color-on-surface);">
+            Move ${selectedNodeIds.size} items to:
+        </h3>
+        <div class="move-folder-list" style="max-height: 300px; overflow-y: auto;">`;
+
+    folders.forEach(f => {
+        html += `<div class="move-folder-option ctx-item" data-folder-id="${f.id}" style="padding: 8px 12px; cursor: pointer; border-radius: var(--radius-sm); margin: 2px 0;">
+            📁 ${f.name}
+        </div>`;
+    });
+
+    html += `</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+            <button class="btn-cancel-move" style="padding: 6px 16px; border: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface); border-radius: var(--radius-sm); cursor: pointer;">Cancel</button>
+        </div>
+    </div>`;
+
+    modal.innerHTML = html;
+    modal.classList.remove('hidden');
+
+    // Event listeners
+    modal.querySelectorAll('.move-folder-option').forEach(opt => {
+        opt.onclick = () => {
+            const folderId = opt.dataset.folderId;
+            modal.classList.add('hidden');
+            performMoveMultiple(folderId, 'inside');
+        };
+    });
+
+    const cancelBtn = modal.querySelector('.btn-cancel-move');
+    if (cancelBtn) cancelBtn.onclick = () => modal.classList.add('hidden');
 }
 
 function execAdd(parentId, type) {
@@ -1839,6 +2263,7 @@ function injectContextMenu() {
 function openContextMenu(e, node) {
     const menu = document.getElementById('context-menu');
     const isFolder = node.type === 'folder';
+    const multiSelect = isMultiSelect();
 
     // Helper para manejar visibilidad
     const setVisibility = (id, show, displayStyle = 'block') => {
@@ -1854,51 +2279,94 @@ function openContextMenu(e, node) {
         return el;
     };
 
-    // --- 1. CONFIGURACIÓN DE CONTENIDO ---
+    // --- MULTI-SELECT CONTEXT MENU ---
+    // When multiple items are selected, show a simplified menu with batch actions
+    const multiHeader = document.getElementById('ctx-multi-header');
+    if (multiSelect) {
+        // Hide single-item sections
+        setVisibility('ctx-folder-section', false);
+        setVisibility('ctx-hr-collapse', false);
+        setVisibility('ctx-cmd-section', false);
+        setVisibility('ctx-expand-all', false, 'flex');
+        setVisibility('ctx-collapse-all', false, 'flex');
+        setVisibility('ctx-copy', false, 'flex');
+        setVisibility('ctx-cut', false, 'flex');
+        setVisibility('ctx-paste', false, 'flex');
+        setVisibility('ctx-edit', false, 'flex');
+        setVisibility('ctx-help-page', false, 'flex');
 
-    // A. Sección de CARPETAS: Visible solo si es carpeta
-    setVisibility('ctx-folder-section', isFolder, 'block');
-    setVisibility('ctx-hr-collapse', isFolder, 'block');
-    // B. Sección de COMANDOS: Visible solo si NO es carpeta (¡Aquí estaba el bug!)
-    // Esto oculta automáticamente Iconos, Pin, Etiquetas y todo lo que esté dentro de 'ctx-cmd-section'
-    const cmdSection = setVisibility('ctx-cmd-section', !isFolder, 'block');
-
-    // C. Configuración específica de Comandos (Solo si es visible)
-    if (!isFolder && cmdSection) {
-        // Configurar texto del PIN
-        const pinBtn = document.getElementById('ctx-pin-toggle');
-        if (pinBtn) {
-            pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
-            pinBtn.style.display = 'flex';
+        // Show multi-select header
+        if (multiHeader) {
+            multiHeader.textContent = `${selectedNodeIds.size} items selected`;
+            multiHeader.style.display = 'block';
         }
 
-        // Configurar botón "Open URL" (solo si el comando contiene URLs)
-        const openUrlBtn = document.getElementById('ctx-open-url');
-        if (openUrlBtn) {
-            const urlInfo = detectUrls(node.cmd);
-            if (urlInfo.urls.length > 0) {
-                openUrlBtn.style.display = 'flex';
-                openUrlBtn.textContent = urlInfo.isPureUrl
-                    ? '🔗 Open URL'
-                    : `🔗 Open URL (${urlInfo.urls.length})`;
-            } else {
-                openUrlBtn.style.display = 'none';
+        // Show delete with count
+        const deleteBtn = document.getElementById('ctx-delete');
+        if (deleteBtn) {
+            deleteBtn.textContent = `🗑️ Delete ${selectedNodeIds.size} items`;
+            deleteBtn.style.display = 'flex';
+        }
+
+        // Show "Move to folder" if applicable
+        setVisibility('ctx-move-to-folder', true, 'flex');
+    } else {
+        // --- SINGLE-ITEM CONTEXT MENU (original behavior) ---
+        if (multiHeader) multiHeader.style.display = 'none';
+        setVisibility('ctx-move-to-folder', false, 'flex');
+
+        // Restore single delete text
+        const deleteBtn = document.getElementById('ctx-delete');
+        if (deleteBtn) deleteBtn.textContent = '🗑️ Delete';
+
+        // Restore visibility of single-item options
+        setVisibility('ctx-copy', true, 'flex');
+        setVisibility('ctx-cut', true, 'flex');
+        setVisibility('ctx-edit', true, 'flex');
+
+        // A. Sección de CARPETAS: Visible solo si es carpeta
+        setVisibility('ctx-folder-section', isFolder, 'block');
+        setVisibility('ctx-hr-collapse', isFolder, 'block');
+        // B. Sección de COMANDOS: Visible solo si NO es carpeta
+        const cmdSection = setVisibility('ctx-cmd-section', !isFolder, 'block');
+
+        // C. Configuración específica de Comandos (Solo si es visible)
+        if (!isFolder && cmdSection) {
+            // Configurar texto del PIN
+            const pinBtn = document.getElementById('ctx-pin-toggle');
+            if (pinBtn) {
+                pinBtn.textContent = node.pinned ? "⭐ Unpin" : "📌 Pin";
+                pinBtn.style.display = 'flex';
+            }
+
+            // Configurar botón "Open URL" (solo si el comando contiene URLs)
+            const openUrlBtn = document.getElementById('ctx-open-url');
+            if (openUrlBtn) {
+                const urlInfo = detectUrls(node.cmd);
+                if (urlInfo.urls.length > 0) {
+                    openUrlBtn.style.display = 'flex';
+                    openUrlBtn.textContent = urlInfo.isPureUrl
+                        ? '🔗 Open URL'
+                        : `🔗 Open URL (${urlInfo.urls.length})`;
+                } else {
+                    openUrlBtn.style.display = 'none';
+                }
             }
         }
-    }
 
-    // D. Opciones de Expandir/Colapsar (Solo carpetas)
-    setVisibility('ctx-expand-all', isFolder, 'flex');
-    setVisibility('ctx-collapse-all', isFolder, 'flex');
+        // D. Opciones de Expandir/Colapsar (Solo carpetas)
+        setVisibility('ctx-expand-all', isFolder, 'flex');
+        setVisibility('ctx-collapse-all', isFolder, 'flex');
 
-    // E. Botón Paste (Solo si hay algo en portapapeles y es carpeta)
-    const pasteBtn = document.getElementById('ctx-paste');
-    if (pasteBtn) {
-        if (appClipboard && isFolder) {
-            pasteBtn.style.display = 'flex';
-            pasteBtn.textContent = appClipboard.action === 'cut' ? '📋 Paste (Move)' : '📋 Paste (Copy)';
-        } else {
-            pasteBtn.style.display = 'none';
+        // E. Botón Paste (Solo si hay algo en portapapeles y es carpeta)
+        const pasteBtn = document.getElementById('ctx-paste');
+        if (pasteBtn) {
+            if (appClipboard && isFolder) {
+                pasteBtn.style.display = 'flex';
+                pasteBtn.textContent = appClipboard.action === 'cut' ? '📋 Paste (Move)' : '📋 Paste (Copy)';
+            } else {
+                pasteBtn.style.display = 'none';
+            }
         }
     }
 

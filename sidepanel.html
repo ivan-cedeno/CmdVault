@@ -128,6 +128,9 @@
     <!-- CONTEXT MENU ACTUALIZADO -->
     <div id="context-menu" class="context-menu hidden">
 
+        <!-- Multi-select header (hidden by default) -->
+        <div id="ctx-multi-header" class="ctx-multi-header" style="display:none"></div>
+
         <div id="ctx-folder-section">
             <div
                 style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin: 8px 0 4px 8px; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -176,6 +179,7 @@
         <hr class="ctx-hr">
 
         <div class="ctx-item" id="ctx-edit">✏️ Edit</div>
+        <div class="ctx-item" id="ctx-move-to-folder" style="display:none">📦 Move to folder...</div>
         <div class="ctx-item danger" id="ctx-delete">🗑️ Delete</div>
     </div>
 

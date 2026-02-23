@@ -455,6 +455,52 @@ input[type="text"]#search-input:focus {
     background-color: var(--md-sys-color-surface-container-high);
     border-color: var(--md-sys-color-primary);
 }
+
+/* ===== MULTI-SELECT ===== */
+
+/* Floating selection count badge */
+.multi-select-badge {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    animation: badgeFadeIn 0.2s ease-out;
+    user-select: none;
+}
+.multi-select-badge.hidden {
+    display: none;
+}
+@keyframes badgeFadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Multi-select context menu header */
+.ctx-multi-header {
+    font-size: 11px;
+    color: var(--md-sys-color-primary);
+    font-weight: 600;
+    margin: 8px 8px 4px 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Move to folder list items */
+.move-folder-option:hover {
+    background-color: var(--md-sys-color-surface-container-high) !important;
+}
+
 .item-header { display: flex; align-items: center; font-size: 0.85rem; padding: 4px; color: var(--md-sys-color-on-surface); }
 
 /* Drag handle — grip dots visible on hover */
