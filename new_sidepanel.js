@@ -305,6 +305,16 @@ function updateHeaderIcons() {
     setChevron('cmd-arrow', commandsCollapsed);
     setChevron('hist-arrow', historyCollapsed);
     setChevron('qa-arrow', qaCollapsed);
+
+    // Sync section header aria-expanded with collapse state
+    const syncAria = (headerId, collapsed) => {
+        const el = document.getElementById(headerId);
+        if (el) el.setAttribute('aria-expanded', String(!collapsed));
+    };
+    syncAria('commands-header', commandsCollapsed);
+    syncAria('history-header', historyCollapsed);
+    syncAria('qa-header', qaCollapsed);
+    syncAria('tagcloud-header', tagCloudCollapsed);
 }
 
 // --- RENDERIZADO ÁRBOL ---
@@ -383,6 +393,17 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     row.className = `tree-item type-${node.type}`;
     row.dataset.nodeId = node.id;
 
+    // --- ARIA: Tree item semantics ---
+    row.setAttribute('role', 'treeitem');
+    row.setAttribute('aria-selected', selectedNodeIds.has(String(node.id)) ? 'true' : 'false');
+    row.setAttribute('aria-label', node.name || 'Untitled');
+    if (node.type === 'folder') {
+        const isExpanded = !node.collapsed || !!filter;
+        row.setAttribute('aria-expanded', String(isExpanded));
+    }
+    // Make focusable for keyboard navigation (roving tabindex)
+    row.tabIndex = (String(node.id) === String(selectedNodeId)) ? 0 : -1;
+
     if (appClipboard && appClipboard.action === 'cut' && String(appClipboard.id) === String(node.id)) {
         row.classList.add('cut-state');
     }
@@ -430,6 +451,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     if (!isFav && !filter) {
         const grip = document.createElement('span');
         grip.className = 'drag-handle';
+        grip.setAttribute('aria-hidden', 'true');
         grip.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><circle cx="9" cy="5" r="1.5"></circle><circle cx="15" cy="5" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="19" r="1.5"></circle><circle cx="15" cy="19" r="1.5"></circle></svg>`;
         header.appendChild(grip);
     }
@@ -583,6 +605,8 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
                 }
                 iconSpan.innerHTML = node.collapsed ? iconClosed : iconOpen;
                 if (chevronSpan) chevronSpan.classList.toggle('expanded', !node.collapsed);
+                // Update ARIA expanded state
+                row.setAttribute('aria-expanded', String(!node.collapsed));
             }
         }
     };
@@ -651,6 +675,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     if (!isFav && node.children && node.type === 'folder') {
         const inner = document.createElement('div');
         inner.className = 'folder-content';
+        inner.setAttribute('role', 'group');
 
         if (node.collapsed && !filter) {
             inner.classList.add('collapsed');
@@ -697,6 +722,8 @@ function setSelectedNode(id) {
     const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
     if (el) {
         el.classList.add('selected');
+        el.setAttribute('aria-selected', 'true');
+        el.tabIndex = 0;
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
     updateSelectionBadge();
@@ -710,7 +737,10 @@ function toggleNodeSelection(id) {
     if (selectedNodeIds.has(strId)) {
         selectedNodeIds.delete(strId);
         const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
-        if (el) el.classList.remove('selected');
+        if (el) {
+            el.classList.remove('selected');
+            el.setAttribute('aria-selected', 'false');
+        }
         // Update primary selectedNodeId
         if (selectedNodeIds.size > 0) {
             selectedNodeId = [...selectedNodeIds][selectedNodeIds.size - 1];
@@ -725,6 +755,7 @@ function toggleNodeSelection(id) {
         const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
         if (el) {
             el.classList.add('selected');
+            el.setAttribute('aria-selected', 'true');
             el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
     }
@@ -762,6 +793,7 @@ function selectNodeRange(targetId) {
         const nodeId = items[i].dataset.nodeId;
         selectedNodeIds.add(String(nodeId));
         items[i].classList.add('selected');
+        items[i].setAttribute('aria-selected', 'true');
     }
 
     selectedNodeId = String(targetId);
@@ -783,6 +815,7 @@ function selectAllNodes() {
         const nodeId = el.dataset.nodeId;
         selectedNodeIds.add(String(nodeId));
         el.classList.add('selected');
+        el.setAttribute('aria-selected', 'true');
     });
 
     selectedNodeId = [...selectedNodeIds][selectedNodeIds.size - 1];
@@ -793,7 +826,10 @@ function selectAllNodes() {
  * Clear all selection visual styles from DOM.
  */
 function clearSelectionStyles() {
-    document.querySelectorAll('.tree-item.selected').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.tree-item.selected').forEach(el => {
+        el.classList.remove('selected');
+        el.setAttribute('aria-selected', 'false');
+    });
 }
 
 /**
@@ -809,6 +845,9 @@ function updateSelectionBadge() {
         badge = document.createElement('div');
         badge.id = 'multi-select-badge';
         badge.className = 'multi-select-badge';
+        badge.setAttribute('role', 'status');
+        badge.setAttribute('aria-live', 'polite');
+        badge.setAttribute('aria-atomic', 'true');
         document.body.appendChild(badge);
     }
     badge.textContent = `${selectedNodeIds.size} selected`;
@@ -854,6 +893,7 @@ function restoreSelection() {
             const el = document.querySelector(`.main-content .tree-item[data-node-id="${id}"]`);
             if (el) {
                 el.classList.add('selected');
+                el.setAttribute('aria-selected', 'true');
                 validIds.add(id);
             }
         });
@@ -868,6 +908,7 @@ function restoreSelection() {
         const el = document.querySelector(`.main-content .tree-item[data-node-id="${selectedNodeId}"]`);
         if (el) {
             el.classList.add('selected');
+            el.setAttribute('aria-selected', 'true');
             selectedNodeIds.add(String(selectedNodeId));
         } else {
             selectedNodeId = null;
@@ -878,10 +919,22 @@ function restoreSelection() {
 
 // --- SETUP EVENTOS ---
 function setupAppEvents() {
-    bindClick('qa-header', () => { qaCollapsed = !qaCollapsed; saveGlobalState(); refreshAll(); });
-    bindClick('history-header', () => { historyCollapsed = !historyCollapsed; saveGlobalState(); refreshAll(); });
+    bindClick('qa-header', () => {
+        qaCollapsed = !qaCollapsed;
+        const qaH = document.getElementById('qa-header');
+        if (qaH) qaH.setAttribute('aria-expanded', String(!qaCollapsed));
+        saveGlobalState(); refreshAll();
+    });
+    bindClick('history-header', () => {
+        historyCollapsed = !historyCollapsed;
+        const hH = document.getElementById('history-header');
+        if (hH) hH.setAttribute('aria-expanded', String(!historyCollapsed));
+        saveGlobalState(); refreshAll();
+    });
     bindClick('commands-header', () => {
         commandsCollapsed = !commandsCollapsed;
+        const cH = document.getElementById('commands-header');
+        if (cH) cH.setAttribute('aria-expanded', String(!commandsCollapsed));
         saveGlobalState();
         refreshAll();
     });
@@ -952,11 +1005,14 @@ function setupAppEvents() {
         overflowBtn.onclick = (e) => {
             e.stopPropagation();
             overflowMenu.classList.toggle('hidden');
+            const isOpen = !overflowMenu.classList.contains('hidden');
+            overflowBtn.setAttribute('aria-expanded', String(isOpen));
         };
         // Close on click outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.overflow-menu-wrapper')) {
                 overflowMenu.classList.add('hidden');
+                overflowBtn.setAttribute('aria-expanded', 'false');
             }
         });
     }
@@ -1230,7 +1286,10 @@ function setupAppEvents() {
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.context-menu')) {
             const cm = document.getElementById('context-menu');
-            if (cm) cm.classList.add('hidden');
+            if (cm) {
+                cm.classList.add('hidden');
+                cm.setAttribute('aria-hidden', 'true');
+            }
         }
 
         // Deselect all when clicking on empty area (not on a tree item, context menu, modal, or dynamic-modal)
@@ -1254,7 +1313,10 @@ function setupAppEvents() {
             if (!target) return;
 
             const id = target.id;
-            const close = () => ctxMenu.classList.add('hidden');
+            const close = () => {
+                ctxMenu.classList.add('hidden');
+                ctxMenu.setAttribute('aria-hidden', 'true');
+            };
 
             if (id === 'ctx-copy') { execCopy(); close(); }
             else if (id === 'ctx-cut') { execCut(); close(); }
@@ -2484,9 +2546,9 @@ function injectContextMenu() {
 
     // HTML de los botones nuevos
     const newItems = `
-    <div class="ctx-item" id="ctx-expand-all" style="display:none">🔽 Expand All</div>
-    <div class="ctx-item" id="ctx-collapse-all" style="display:none">▶️ Collapse All</div>
-    
+    <div class="ctx-item" id="ctx-expand-all" role="menuitem" style="display:none">🔽 Expand All</div>
+    <div class="ctx-item" id="ctx-collapse-all" role="menuitem" style="display:none">▶️ Collapse All</div>
+
     <hr class="ctx-hr" id="ctx-hr-collapse" style="display:none">
 `;
 
@@ -2616,6 +2678,7 @@ function openContextMenu(e, node) {
     menu.style.visibility = 'hidden';
     menu.classList.remove('hidden');
     menu.style.display = 'block';
+    menu.setAttribute('aria-hidden', 'false');
 
     // Paso B: Obtener dimensiones exactas
     const menuWidth = menu.offsetWidth;
@@ -2668,7 +2731,7 @@ function renderColorPalette() {
             saveData();
             if (typeof refreshAll === 'function') refreshAll();
             const menu = document.getElementById('context-menu');
-            if (menu) menu.classList.add('hidden');
+            if (menu) { menu.classList.add('hidden'); menu.setAttribute('aria-hidden', 'true'); }
         }
     };
     p.appendChild(resetDot);
@@ -2689,7 +2752,7 @@ function renderColorPalette() {
 
                 // 3. UI: Cerrar menú
                 const menu = document.getElementById('context-menu');
-                if (menu) menu.classList.add('hidden');
+                if (menu) { menu.classList.add('hidden'); menu.setAttribute('aria-hidden', 'true'); }
                 console.log("🎨 Color aplicado exitosamente:", c);
             } else {
                 console.error("❌ Error: No se encontró el folder con ID:", contextTargetId);

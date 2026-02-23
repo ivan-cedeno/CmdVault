@@ -15,24 +15,24 @@
             <div class="app-title">user@CmdVault:~$</div>
             <div class="action-buttons">
                 <!-- Add Buttons: Pill Group -->
-                <div class="add-btn-group">
-                    <button id="btn-add-root" class="add-btn add-btn-folder" title="New Root Folder">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div class="add-btn-group" role="group" aria-label="Add items">
+                    <button id="btn-add-root" class="add-btn add-btn-folder" title="New Root Folder" aria-label="New Root Folder">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
                     </button>
-                    <button id="btn-add-cmd" class="add-btn add-btn-command" title="New Command (select a folder first)">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <button id="btn-add-cmd" class="add-btn add-btn-command" title="New Command (select a folder first)" aria-label="New Command">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <polyline points="4 17 10 11 4 5"></polyline>
                             <line x1="12" y1="19" x2="20" y2="19"></line>
                         </svg>
                     </button>
                 </div>
 
-                <button id="btn-toggle-all" class="header-btn" title="Expand All">
-                    <svg id="toggle-all-icon" class="header-icon" viewBox="0 0 24 24">
+                <button id="btn-toggle-all" class="header-btn" title="Expand All" aria-label="Expand or Collapse All Folders">
+                    <svg id="toggle-all-icon" class="header-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <!-- Expand state: unfold-vertical icon -->
                         <path d="M12 3v6l3-3m-3 3-3-3" stroke="currentColor" fill="none"></path>
                         <path d="M12 21v-6l3 3m-3-3-3 3" stroke="currentColor" fill="none"></path>
@@ -42,29 +42,29 @@
 
                 <!-- Overflow Menu -->
                 <div class="overflow-menu-wrapper">
-                    <button id="btn-overflow" class="header-btn" title="More actions">
-                        <svg class="header-icon" viewBox="0 0 24 24">
+                    <button id="btn-overflow" class="header-btn" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
+                        <svg class="header-icon" viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"></circle>
                             <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle>
                             <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"></circle>
                         </svg>
                     </button>
-                    <div id="overflow-menu" class="overflow-menu hidden">
-                        <div class="overflow-item" id="overflow-clear-clipboard">
+                    <div id="overflow-menu" class="overflow-menu hidden" role="menu" aria-label="More actions">
+                        <div class="overflow-item" id="overflow-clear-clipboard" role="menuitem">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.9-9.9c1-1 2.5-1 3.4 0l4.3 4.3c1 1 1 2.5 0 3.4l-9.9 9.9c-1 1-2.5 1-3.4 0z"></path>
                                 <path d="M22 21H7"></path><path d="m5 11 9 9"></path>
                             </svg>
                             <span>Clear Clipboard</span>
                         </div>
-                        <div class="overflow-item" id="overflow-settings">
+                        <div class="overflow-item" id="overflow-settings" role="menuitem">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="3"></circle>
                                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                             </svg>
                             <span>Settings</span>
                         </div>
-                        <div class="overflow-item" id="overflow-undock">
+                        <div class="overflow-item" id="overflow-undock" role="menuitem">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M15 3h6v6"></path><path d="M10 14 21 3"></path>
                                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -78,55 +78,55 @@
 
         <div class="search-wrapper">
             <svg class="search-icon-v3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="search-input" placeholder="Search commands... (Ctrl+Space)" autocomplete="off">
+            <input type="text" id="search-input" placeholder="Search commands... (Ctrl+Space)" autocomplete="off" aria-label="Search commands" role="searchbox">
 
         </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" role="main">
         <div id="quick-access-container" class="section-container hidden">
-            <div id="qa-header" class="section-header">
+            <div id="qa-header" class="section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="qa-list">
                 <span class="section-label">⭐ Favorites</span>
-                <svg id="qa-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg id="qa-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="qa-list" class="section-content"></div>
+            <div id="qa-list" class="section-content" role="list" aria-label="Favorites"></div>
         </div>
 
         <div id="history-container" class="section-container">
-            <div id="history-header" class="section-header">
+            <div id="history-header" class="section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="history-list">
                 <span class="section-label">📜 Last Used</span>
-                <svg id="hist-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg id="hist-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="history-list" class="section-content"></div>
+            <div id="history-list" class="section-content" role="list" aria-label="Last Used"></div>
         </div>
 
         <div id="tagcloud-container" class="section-container hidden">
-            <div id="tagcloud-header" class="section-header">
+            <div id="tagcloud-header" class="section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="tagcloud-list">
                 <span class="section-label">🏷️ Tags</span>
-                <svg id="tagcloud-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg id="tagcloud-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="tagcloud-list" class="section-content"></div>
+            <div id="tagcloud-list" class="section-content" role="list" aria-label="Tags"></div>
         </div>
 
         <div id="commands-wrapper" class="section-container">
-            <div id="commands-header" class="section-header">
+            <div id="commands-header" class="section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="tree-container">
                 <span class="section-label">📂 All Commands</span>
-                <svg id="cmd-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg id="cmd-arrow" class="section-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="tree-container" class="section-content"></div>
+            <div id="tree-container" class="section-content" role="tree" aria-label="Commands"></div>
         </div>
     </div>
 
     <input type="file" id="file-input" hidden accept=".json">
     <input type="file" id="file-input-merge" hidden accept=".json">
-    <div id="status-msg" class="status-msg hidden"></div>
+    <div id="status-msg" class="status-msg hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- CONTEXT MENU ACTUALIZADO -->
-    <div id="context-menu" class="context-menu hidden">
+    <div id="context-menu" class="context-menu hidden" role="menu" aria-label="Context menu" aria-hidden="true">
 
         <!-- Multi-select header (hidden by default) -->
         <div id="ctx-multi-header" class="ctx-multi-header" style="display:none"></div>
@@ -139,9 +139,9 @@
 
             <hr class="ctx-hr">
 
-            <div class="ctx-item" id="ctx-add-folder">📁 New Sub-Folder</div>
-            <div class="ctx-item" id="ctx-add-cmd">💻 Add Command</div>
-            <div class="ctx-item" id="ctx-export-folder">💾 Export Folder</div>
+            <div class="ctx-item" id="ctx-add-folder" role="menuitem">📁 New Sub-Folder</div>
+            <div class="ctx-item" id="ctx-add-cmd" role="menuitem">💻 Add Command</div>
+            <div class="ctx-item" id="ctx-export-folder" role="menuitem">💾 Export Folder</div>
         </div>
 
         <div id="ctx-cmd-section" class="hidden">
@@ -165,26 +165,26 @@
 
             <hr class="ctx-hr">
 
-            <div class="ctx-item" id="ctx-pin-toggle">📌 Pin / Unpin</div>
-            <div class="ctx-item" id="ctx-open-url" style="display:none">🔗 Open URL</div>
-            <div class="ctx-item" id="ctx-help-page">📖 Help Page</div>
+            <div class="ctx-item" id="ctx-pin-toggle" role="menuitem">📌 Pin / Unpin</div>
+            <div class="ctx-item" id="ctx-open-url" style="display:none" role="menuitem">🔗 Open URL</div>
+            <div class="ctx-item" id="ctx-help-page" role="menuitem">📖 Help Page</div>
         </div>
 
         <hr class="ctx-hr">
 
-        <div class="ctx-item" id="ctx-copy">📋 Copy</div>
-        <div class="ctx-item" id="ctx-cut">✂️ Cut</div>
-        <div class="ctx-item" id="ctx-paste" style="display:none">📋 Paste</div>
+        <div class="ctx-item" id="ctx-copy" role="menuitem">📋 Copy</div>
+        <div class="ctx-item" id="ctx-cut" role="menuitem">✂️ Cut</div>
+        <div class="ctx-item" id="ctx-paste" style="display:none" role="menuitem">📋 Paste</div>
 
         <hr class="ctx-hr">
 
-        <div class="ctx-item" id="ctx-edit">✏️ Edit</div>
-        <div class="ctx-item" id="ctx-duplicate">📄 Duplicate</div>
-        <div class="ctx-item" id="ctx-move-to-folder" style="display:none">📦 Move to folder...</div>
-        <div class="ctx-item danger" id="ctx-delete">🗑️ Delete</div>
+        <div class="ctx-item" id="ctx-edit" role="menuitem">✏️ Edit</div>
+        <div class="ctx-item" id="ctx-duplicate" role="menuitem">📄 Duplicate</div>
+        <div class="ctx-item" id="ctx-move-to-folder" style="display:none" role="menuitem">📦 Move to folder...</div>
+        <div class="ctx-item danger" id="ctx-delete" role="menuitem">🗑️ Delete</div>
     </div>
 
-    <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Variables">
         <div class="modal-box">
             <div class="modal-header">Variables</div>
             <div id="variable-fields"></div>
@@ -195,7 +195,7 @@
         </div>
     </div>
 
-    <div id="settings-overlay" class="settings-overlay hidden">
+    <div id="settings-overlay" class="settings-overlay hidden" role="dialog" aria-modal="true" aria-label="Settings">
         <div class="settings-box">
             <h3
                 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
@@ -262,7 +262,7 @@
         </div>
     </div>
 
-    <div id="dynamic-modal" class="modal-overlay hidden">
+    <div id="dynamic-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Configure Command">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 style="margin:0; color:var(--md-sys-color-primary);">🚀 Configure Command</h3>
@@ -282,9 +282,9 @@
     </div>
 
     <!-- CONFIRM MODAL (Replaces native confirm()) -->
-    <div id="confirm-modal-overlay" class="confirm-modal-overlay hidden">
+    <div id="confirm-modal-overlay" class="confirm-modal-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-message">
         <div class="confirm-modal-box">
-            <div class="confirm-modal-icon" id="confirm-modal-icon"></div>
+            <div class="confirm-modal-icon" id="confirm-modal-icon" aria-hidden="true"></div>
             <div class="confirm-modal-title" id="confirm-modal-title"></div>
             <div class="confirm-modal-message" id="confirm-modal-message"></div>
             <div class="confirm-modal-actions">
@@ -295,7 +295,7 @@
     </div>
 
     <!-- HELP PAGE OVERLAY -->
-    <div id="help-page-overlay" class="help-page-overlay hidden">
+    <div id="help-page-overlay" class="help-page-overlay hidden" role="dialog" aria-modal="true" aria-label="Help Page">
         <div class="help-page-container">
             <div class="help-page-header">
                 <h3 id="help-page-title" style="margin:0; font-size:14px; font-weight:600; color:var(--md-sys-color-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60%;">Help Page</h3>

@@ -1,6 +1,39 @@
 /* --- MATERIAL DESIGN 3 EXPRESSIVE THEME SYSTEM --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* ===== ACCESSIBILITY ===== */
+
+/* Screen-reader only: visually hidden but announced by AT */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus-visible indicators for keyboard navigation */
+.tree-item:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: -2px;
+}
+.section-header:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+.ctx-item:focus-visible, [role="menuitem"]:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: -2px;
+    background-color: var(--md-sys-color-surface-container-high);
+}
+
 /* 1. VARIABLES ESTRUCTURALES */
 :root {
     --font-ui: 'Inter', sans-serif;
