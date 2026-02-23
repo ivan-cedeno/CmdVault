@@ -279,6 +279,148 @@ function detectUrls(text) {
     return { isPureUrl, urls: matches };
 }
 
+// --- AUTO-UPDATE CHECKER ---
+const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/ivan-cedeno/CmdVault/main/version.json';
+const UPDATE_CHECK_INTERVAL = 48 * 60 * 60 * 1000; // 48 hours in ms
+
+/**
+ * Compares two semver strings (e.g. "1.0.0" vs "1.1.0").
+ * Returns: -1 if a < b, 0 if equal, 1 if a > b.
+ */
+function compareVersions(a, b) {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const na = pa[i] || 0;
+        const nb = pb[i] || 0;
+        if (na < nb) return -1;
+        if (na > nb) return 1;
+    }
+    return 0;
+}
+
+/**
+ * Updates the Settings → Updates section UI with current state.
+ * @param {object|null} remote - The remote version.json data, or null.
+ * @param {'checking'|'up-to-date'|'update-available'|'error'} status
+ * @param {string} [errorMsg] - Optional error message.
+ */
+function updateSettingsUpdateUI(remote, status, errorMsg) {
+    const statusText = document.getElementById('update-status-text');
+    const infoDiv = document.getElementById('update-info');
+    const changelogDiv = document.getElementById('update-changelog');
+    const versionSpan = document.getElementById('current-version');
+
+    // Always show current version from manifest
+    const localVersion = chrome.runtime.getManifest().version;
+    if (versionSpan) versionSpan.textContent = `v${localVersion}`;
+
+    if (!statusText) return;
+
+    switch (status) {
+        case 'checking':
+            statusText.textContent = '🔄 Checking...';
+            statusText.style.color = '';
+            if (infoDiv) infoDiv.classList.add('hidden');
+            break;
+        case 'up-to-date':
+            statusText.textContent = '✅ Up to date';
+            statusText.style.color = '#4caf50';
+            if (infoDiv) infoDiv.classList.add('hidden');
+            break;
+        case 'update-available':
+            statusText.textContent = `🆕 v${remote.version} available`;
+            statusText.style.color = 'var(--md-sys-color-primary)';
+            if (infoDiv) infoDiv.classList.remove('hidden');
+            if (changelogDiv) changelogDiv.textContent = remote.changelog || 'No changelog provided.';
+            break;
+        case 'error':
+            statusText.textContent = `⚠️ ${errorMsg || 'Check failed'}`;
+            statusText.style.color = '#ff9800';
+            if (infoDiv) infoDiv.classList.add('hidden');
+            break;
+    }
+}
+
+/**
+ * Shows or hides the red pulsing badge on the overflow button.
+ * @param {boolean} show
+ */
+function showUpdateBadge(show) {
+    const badge = document.getElementById('update-badge');
+    if (!badge) return;
+    if (show) {
+        badge.classList.remove('hidden');
+        badge.setAttribute('aria-hidden', 'false');
+    } else {
+        badge.classList.add('hidden');
+        badge.setAttribute('aria-hidden', 'true');
+    }
+}
+
+/**
+ * Fetches version.json from GitHub and compares with the local manifest version.
+ * Respects the 48-hour check interval unless force=true.
+ * @param {boolean} [force=false] - Skip the interval check (for manual "Check Now" clicks).
+ */
+async function checkForUpdates(force = false) {
+    try {
+        // Check if enough time has passed since last check
+        if (!force) {
+            const stored = await new Promise(resolve => {
+                chrome.storage.local.get(['lastUpdateCheck'], resolve);
+            });
+            const lastCheck = stored.lastUpdateCheck || 0;
+            if (Date.now() - lastCheck < UPDATE_CHECK_INTERVAL) {
+                // Not time yet — but still show cached result if available
+                const cached = await new Promise(resolve => {
+                    chrome.storage.local.get(['cachedUpdateResult'], resolve);
+                });
+                if (cached.cachedUpdateResult) {
+                    const c = cached.cachedUpdateResult;
+                    const localVersion = chrome.runtime.getManifest().version;
+                    if (compareVersions(localVersion, c.version) < 0) {
+                        updateSettingsUpdateUI(c, 'update-available');
+                        showUpdateBadge(true);
+                    } else {
+                        updateSettingsUpdateUI(null, 'up-to-date');
+                        showUpdateBadge(false);
+                    }
+                }
+                return;
+            }
+        }
+
+        updateSettingsUpdateUI(null, 'checking');
+
+        const response = await fetch(UPDATE_CHECK_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const remote = await response.json();
+        const localVersion = chrome.runtime.getManifest().version;
+
+        // Save check timestamp and result
+        chrome.storage.local.set({
+            lastUpdateCheck: Date.now(),
+            cachedUpdateResult: remote
+        });
+
+        if (compareVersions(localVersion, remote.version) < 0) {
+            // New version available
+            updateSettingsUpdateUI(remote, 'update-available');
+            showUpdateBadge(true);
+            console.log(`🆕 CmdVault update available: v${remote.version}`);
+        } else {
+            updateSettingsUpdateUI(null, 'up-to-date');
+            showUpdateBadge(false);
+            console.log('✅ CmdVault is up to date');
+        }
+    } catch (err) {
+        console.warn('Update check failed:', err.message);
+        updateSettingsUpdateUI(null, 'error', 'Network error');
+    }
+}
+
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 V14.2 Context Menu Injection Fix...");
@@ -349,6 +491,10 @@ function loadDataFromStorage() {
 
         isDataLoaded = true;
         staggerAnimationEnabled = true; // Enable stagger animation for initial load
+
+        // Trigger auto-update check (non-blocking, respects 48h interval)
+        checkForUpdates(false);
+
         refreshAll();
     });
 }
@@ -1157,7 +1303,19 @@ function setupAppEvents() {
     bindClick('btn-sync-upload', () => uploadToGist());
     bindClick('btn-sync-download', () => downloadFromGist());
 
-
+    // --- Update Checker buttons ---
+    bindClick('btn-check-update', () => checkForUpdates(true));
+    bindClick('btn-download-update', () => {
+        // Open download URL from cached result
+        chrome.storage.local.get(['cachedUpdateResult'], (items) => {
+            const remote = items.cachedUpdateResult;
+            if (remote && remote.download_url) {
+                window.open(remote.download_url, '_blank');
+            } else {
+                showToast('⚠️ No download URL available');
+            }
+        });
+    });
 
     const search = document.getElementById('search-input');
     if (search) search.oninput = (e) => refreshAll();

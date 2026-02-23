@@ -42,12 +42,13 @@
 
                 <!-- Overflow Menu -->
                 <div class="overflow-menu-wrapper">
-                    <button id="btn-overflow" class="header-btn" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
+                    <button id="btn-overflow" class="header-btn" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false" style="position: relative;">
                         <svg class="header-icon" viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"></circle>
                             <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle>
                             <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"></circle>
                         </svg>
+                        <span id="update-badge" class="update-badge hidden" aria-hidden="true"></span>
                     </button>
                     <div id="overflow-menu" class="overflow-menu hidden" role="menu" aria-label="More actions">
                         <div class="overflow-item" id="overflow-clear-clipboard" role="menuitem">
@@ -237,6 +238,26 @@
             <div class="sync-actions" style="margin-bottom: 25px; display: flex; gap: 10px;">
                 <button id="btn-sync-upload" class="btn-gh upload" disabled style="flex:1;">⬆️ Push</button>
                 <button id="btn-sync-download" class="btn-gh download" disabled style="flex:1;">⬇️ Fetch</button>
+            </div>
+
+            <h3
+                style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
+                Updates
+            </h3>
+            <div style="margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 0.85em; opacity: 0.7;">Current Version</span>
+                    <span id="current-version" style="font-size: 0.85em; font-weight: 600; font-family: var(--font-code);">v1.0.0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 0.85em; opacity: 0.7;">Status</span>
+                    <span id="update-status-text" style="font-size: 0.85em; font-weight: 500;">Not checked yet</span>
+                </div>
+                <div id="update-info" class="update-info hidden">
+                    <div id="update-changelog" style="font-size: 0.8em; opacity: 0.85; margin-bottom: 10px; padding: 8px 10px; background: var(--md-sys-color-surface-container); border-radius: var(--radius-sm); border-left: 3px solid var(--md-sys-color-primary); line-height: 1.5;"></div>
+                    <button id="btn-download-update" class="btn-gh upload" style="width: 100%; margin-bottom: 10px;">⬇️ Download Update</button>
+                </div>
+                <button id="btn-check-update" class="btn-secondary" style="width: 100%;">🔄 Check Now</button>
             </div>
 
             <h3

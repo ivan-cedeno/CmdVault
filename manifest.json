@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "🚀DEV☁️IVAN_CdmVault v3",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Extension to store and manage sys-admin commands",
   "permissions": [
     "sidePanel",

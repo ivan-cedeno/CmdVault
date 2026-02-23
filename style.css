@@ -2432,3 +2432,37 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     background: rgba(66, 135, 245, 0.1) !important;
     color: var(--md-sys-color-primary) !important;
 }
+
+/* ===== UPDATE BADGE ===== */
+
+.update-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4444;
+    box-shadow: 0 0 6px rgba(255, 68, 68, 0.6);
+    animation: badge-pulse 2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.update-badge.hidden {
+    display: none;
+}
+
+.update-info {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--md-sys-color-surface-container-high);
+}
+
+.update-info.hidden {
+    display: none;
+}
