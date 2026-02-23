@@ -898,7 +898,7 @@ function setupAppEvents() {
     });
 
     // ==========================================================================
-    //  GLOBAL KEYBOARD SHORTCUTS (↑↓ navigation, Delete, F2, Enter, Escape, Ctrl+A)
+    //  GLOBAL KEYBOARD SHORTCUTS (↑↓←→ navigation, Delete, F2, Enter, Escape, Ctrl+A)
     // ==========================================================================
     document.addEventListener('keydown', (e) => {
         // Guard: block during inline edit, help page, or modals
@@ -956,6 +956,55 @@ function setupAppEvents() {
             } else {
                 // Plain arrow: single select (clears multi-select)
                 setSelectedNode(items[nextIdx].dataset.nodeId);
+            }
+            return;
+        }
+
+        // --- ARROW RIGHT: Expand folder / move into first child ---
+        if (e.key === 'ArrowRight') {
+            if (selectedNodeId === null || isMultiSelect()) return;
+            e.preventDefault();
+            const node = findNode(treeData, selectedNodeId);
+            if (!node || node.type !== 'folder') return;
+
+            if (node.collapsed) {
+                // Expand the folder
+                node.collapsed = false;
+                saveData();
+                refreshAll();
+            } else if (node.children && node.children.length > 0) {
+                // Already expanded — move selection to first child
+                const items = getVisibleTreeItems();
+                const currentIdx = items.findIndex(el => String(el.dataset.nodeId) === String(selectedNodeId));
+                if (currentIdx !== -1 && currentIdx + 1 < items.length) {
+                    setSelectedNode(items[currentIdx + 1].dataset.nodeId);
+                }
+            }
+            return;
+        }
+
+        // --- ARROW LEFT: Collapse folder / move to parent ---
+        if (e.key === 'ArrowLeft') {
+            if (selectedNodeId === null || isMultiSelect()) return;
+            e.preventDefault();
+            const node = findNode(treeData, selectedNodeId);
+            if (!node) return;
+
+            if (node.type === 'folder' && !node.collapsed) {
+                // Collapse the folder
+                node.collapsed = true;
+                saveData();
+                refreshAll();
+            } else {
+                // Already collapsed or is a command — navigate to parent folder
+                const parentList = findParentList(treeData, selectedNodeId);
+                if (parentList && parentList !== treeData) {
+                    // Find the parent folder node
+                    const parentId = findParentFolderId(treeData, selectedNodeId);
+                    if (parentId) {
+                        setSelectedNode(parentId);
+                    }
+                }
             }
             return;
         }
@@ -1833,6 +1882,21 @@ function findParentList(nodes, id) {
         }
     }
     return null;
+}
+
+/**
+ * Finds the ID of the parent folder that contains the node with the given id.
+ * Returns null if the node is at root level.
+ */
+function findParentFolderId(nodes, id, parentId = null) {
+    for (let n of nodes) {
+        if (String(n.id) === String(id)) return parentId;
+        if (n.children && n.type === 'folder') {
+            const found = findParentFolderId(n.children, id, n.id);
+            if (found !== undefined) return found;
+        }
+    }
+    return undefined;
 }
 
 function isDescendant(parentId, childId) {
