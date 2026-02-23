@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
   "changelog": "Initial release with multi-select, undo/redo, tooltips, accessibility, and UI polish",
-  "download_url": "https://github.com/ivan-cedeno/CmdVault/releases/latest/download/CmdVault.zip",
+  "download_url": "https://github.com/ivan-cedeno/CmdVault/archive/refs/heads/main.zip",
   "date": "2026-02-23"
 }
