@@ -280,7 +280,7 @@ function detectUrls(text) {
 }
 
 // --- AUTO-UPDATE CHECKER ---
-const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/ivan-cedeno/CmdVault/main/version.json';
+const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/ivan-cedeno/CmdVault/claude/kind-swartz/version.json';
 const UPDATE_CHECK_INTERVAL = 48 * 60 * 60 * 1000; // 48 hours in ms
 
 /**
