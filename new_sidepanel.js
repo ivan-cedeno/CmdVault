@@ -280,7 +280,7 @@ function detectUrls(text) {
 }
 
 // --- AUTO-UPDATE CHECKER ---
-const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/ivan-cedeno/CmdVault/claude/kind-swartz/version.json';
+const UPDATE_CHECK_URL = 'https://api.github.com/repos/ivan-cedeno/CmdVault/contents/version.json?ref=main';
 const UPDATE_CHECK_INTERVAL = 48 * 60 * 60 * 1000; // 48 hours in ms
 
 /**
@@ -393,10 +393,16 @@ async function checkForUpdates(force = false) {
 
         updateSettingsUpdateUI(null, 'checking');
 
-        const response = await fetch(UPDATE_CHECK_URL, { cache: 'no-store' });
+        // Build fetch options — use ghToken for private repo auth if available
+        const fetchOpts = { cache: 'no-store', headers: { 'Accept': 'application/vnd.github.v3+json' } };
+        if (ghToken) fetchOpts.headers['Authorization'] = `token ${ghToken}`;
+
+        const response = await fetch(UPDATE_CHECK_URL, fetchOpts);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        const remote = await response.json();
+        // GitHub API returns base64-encoded content; decode it
+        const apiData = await response.json();
+        const remote = JSON.parse(atob(apiData.content));
         const localVersion = chrome.runtime.getManifest().version;
 
         // Save check timestamp and result
