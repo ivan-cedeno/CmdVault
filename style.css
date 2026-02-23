@@ -34,6 +34,50 @@
     background-color: var(--md-sys-color-surface-container-high);
 }
 
+/* ===== COMMAND TOOLTIP ===== */
+
+.cmd-tooltip {
+    position: fixed;
+    z-index: 9999;
+    max-width: 320px;
+    min-width: 160px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm, 8px);
+    background: var(--md-sys-color-inverse-surface, #2e2e2e);
+    color: var(--md-sys-color-inverse-on-surface, #f0f0f0);
+    font-family: var(--font-ui, 'Inter', sans-serif);
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    word-break: break-word;
+}
+.cmd-tooltip.visible {
+    opacity: 1;
+}
+.cmd-tooltip-label {
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--md-sys-color-inverse-on-surface, #f0f0f0);
+}
+.cmd-tooltip-cmd {
+    font-family: var(--font-code, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    color: var(--md-sys-color-inverse-on-surface, #ccc);
+    opacity: 0.78;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 296px;
+}
+/* When tooltip has both description and cmd, add a subtle separator */
+.cmd-tooltip-label + .cmd-tooltip-cmd {
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* 1. VARIABLES ESTRUCTURALES */
 :root {
     --font-ui: 'Inter', sans-serif;

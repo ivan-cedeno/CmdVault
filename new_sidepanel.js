@@ -109,6 +109,94 @@ let selectedNodeIds = new Set(); // Multi-select: all currently selected node ID
 let selectionAnchorId = null; // Shift+Click range anchor
 let staggerAnimationEnabled = false; // Controls stagger entry animation (only on initial load)
 
+// --- COMMAND TOOLTIP ---
+let activeTooltip = null;   // Currently visible tooltip DOM element
+let tooltipTimer = null;    // Delay timer before showing tooltip
+const TOOLTIP_DELAY = 400;  // ms before tooltip appears
+
+/**
+ * Shows a custom tooltip near the given header element with command info.
+ * @param {HTMLElement} headerEl - The .item-header element to anchor the tooltip to
+ * @param {Object} node - The command node (expects .description and/or .cmd)
+ */
+function showCmdTooltip(headerEl, node) {
+    hideCmdTooltip(); // Remove any existing tooltip first
+
+    const hasDesc = node.description && node.description.trim();
+    const hasCmd = node.cmd && node.cmd.trim();
+    if (!hasDesc && !hasCmd) return;
+
+    const tip = document.createElement('div');
+    tip.className = 'cmd-tooltip';
+
+    if (hasDesc) {
+        const descEl = document.createElement('div');
+        descEl.className = 'cmd-tooltip-label';
+        descEl.textContent = node.description.trim();
+        tip.appendChild(descEl);
+    }
+
+    if (hasCmd) {
+        const cmdEl = document.createElement('div');
+        cmdEl.className = 'cmd-tooltip-cmd';
+        // Truncate: show first line only if multiline, cap at 120 chars
+        let preview = node.cmd.trim();
+        const firstNewline = preview.indexOf('\n');
+        if (firstNewline > 0) {
+            preview = preview.substring(0, firstNewline) + ' …(multiline)';
+        }
+        if (preview.length > 120) {
+            preview = preview.substring(0, 117) + '…';
+        }
+        cmdEl.textContent = '$ ' + preview;
+        tip.appendChild(cmdEl);
+    }
+
+    document.body.appendChild(tip);
+    activeTooltip = tip;
+
+    // Position: below the header, or above if near viewport bottom
+    const rect = headerEl.getBoundingClientRect();
+    const tipHeight = tip.offsetHeight;
+    const tipWidth = tip.offsetWidth;
+    const GAP = 6;
+
+    let top = rect.bottom + GAP;
+    let left = rect.left;
+
+    // Flip above if too close to bottom
+    if (top + tipHeight > window.innerHeight - 10) {
+        top = rect.top - tipHeight - GAP;
+    }
+    // Keep within horizontal bounds
+    if (left + tipWidth > window.innerWidth - 10) {
+        left = window.innerWidth - tipWidth - 10;
+    }
+    if (left < 10) left = 10;
+
+    tip.style.top = `${top}px`;
+    tip.style.left = `${left}px`;
+
+    // Trigger fade-in on next frame
+    requestAnimationFrame(() => {
+        if (activeTooltip === tip) tip.classList.add('visible');
+    });
+}
+
+/**
+ * Removes the active tooltip immediately.
+ */
+function hideCmdTooltip() {
+    if (tooltipTimer) {
+        clearTimeout(tooltipTimer);
+        tooltipTimer = null;
+    }
+    if (activeTooltip) {
+        activeTooltip.remove();
+        activeTooltip = null;
+    }
+}
+
 // --- UNDO/REDO ---
 const undoStack = []; // Array of { snapshot: string (JSON), description: string }
 const redoStack = []; // Array of { snapshot: string (JSON), description: string }
@@ -202,6 +290,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setupHelpPageEvents();
     } catch (e) { console.error("UI Init Error:", e); }
     loadDataFromStorage();
+
+    // Hide tooltip on scroll to prevent detached floating tooltip
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) mainContent.addEventListener('scroll', hideCmdTooltip, { passive: true });
 });
 
 // --- CARGA DE DATOS ---
@@ -427,7 +519,19 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         header.style.color = displayColor;
     }
     
-    if (node.description) header.title = node.description;
+    // --- CUSTOM TOOLTIP (commands only) ---
+    // Replaces native title with a styled tooltip showing description + cmd preview
+    if (node.type === 'command') {
+        header.addEventListener('mouseenter', () => {
+            if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
+            tooltipTimer = setTimeout(() => showCmdTooltip(header, node), TOOLTIP_DELAY);
+        });
+        header.addEventListener('mouseleave', () => hideCmdTooltip());
+        header.addEventListener('mousedown', () => hideCmdTooltip());
+    } else if (node.description) {
+        // Folders still use native title for simplicity
+        header.title = node.description;
+    }
 
     // --- ICONOS V3 --- (Se mantienen tus variables actuales)
     const iconSpan = document.createElement('span');
@@ -2561,6 +2665,7 @@ function injectContextMenu() {
 
 /* --- FUNCIÓN CONTEXT MENU CORREGIDA (FIX ICONOS/PIN) --- */
 function openContextMenu(e, node) {
+    hideCmdTooltip(); // Dismiss tooltip when context menu opens
     const menu = document.getElementById('context-menu');
     const isFolder = node.type === 'folder';
     const multiSelect = isMultiSelect();
