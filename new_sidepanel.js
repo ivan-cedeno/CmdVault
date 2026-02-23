@@ -107,6 +107,7 @@ let allExpanded = false; // toggle state for expand/collapse all
 let selectedNodeId = null; // Currently keyboard-selected tree item ID (primary/last-clicked)
 let selectedNodeIds = new Set(); // Multi-select: all currently selected node IDs
 let selectionAnchorId = null; // Shift+Click range anchor
+let staggerAnimationEnabled = false; // Controls stagger entry animation (only on initial load)
 
 // --- URL DETECTION ---
 const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
@@ -190,6 +191,7 @@ function loadDataFromStorage() {
         if (title) title.textContent = `${items.username || 'user'}@CmdVault:~$`;
 
         isDataLoaded = true;
+        staggerAnimationEnabled = true; // Enable stagger animation for initial load
         refreshAll();
     });
 }
@@ -254,12 +256,60 @@ function renderTree(filter) {
         return;
     }
 
+    const shouldAnimate = staggerAnimationEnabled;
+    let staggerIndex = 0;
+
     treeData.forEach(node => {
         if (node && isVisible(node, filter)) {
             const el = createNodeElement(node, filter);
+            if (shouldAnimate) {
+                applyStaggerAnimation(el, staggerIndex);
+                staggerIndex++;
+            }
             container.appendChild(el);
         }
     });
+
+    // Disable stagger after first render so subsequent refreshes are instant
+    if (shouldAnimate) staggerAnimationEnabled = false;
+}
+
+/**
+ * Applies stagger fade-in animation to a tree node element and its visible children.
+ * Each item gets an incremental delay for a cascading effect.
+ * @param {HTMLElement} el - The wrapper element from createNodeElement
+ * @param {number} startIndex - Starting stagger index for delay calculation
+ * @returns {number} The next stagger index after processing this element
+ */
+function applyStaggerAnimation(el, startIndex) {
+    const STAGGER_DELAY = 30; // ms between each item
+    const MAX_DELAY = 600; // cap max delay so large trees don't feel slow
+
+    // Animate the tree-item row itself
+    const row = el.querySelector('.tree-item');
+    if (row) {
+        const delay = Math.min(startIndex * STAGGER_DELAY, MAX_DELAY);
+        row.classList.add('stagger-in');
+        row.style.animationDelay = `${delay}ms`;
+
+        // Clean up animation class after it finishes
+        row.addEventListener('animationend', () => {
+            row.classList.remove('stagger-in');
+            row.style.animationDelay = '';
+        }, { once: true });
+    }
+
+    // Recurse into visible children (folder-content)
+    let idx = startIndex + 1;
+    const folderContent = el.querySelector(':scope > .folder-content:not(.collapsed)');
+    if (folderContent) {
+        const childWrappers = folderContent.querySelectorAll(':scope > [data-node-id]');
+        childWrappers.forEach(child => {
+            idx = applyStaggerAnimation(child, idx);
+        });
+    }
+
+    return idx;
 }
 
 // PUNTO 1: Añadimos 'inheritedColor' como cuarto parámetro (neutro por defecto)

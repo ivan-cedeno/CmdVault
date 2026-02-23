@@ -444,6 +444,21 @@ input[type="text"]#search-input:focus {
     border: 2px solid transparent; /* Bordes base */
     display: flex; flex-direction: column;
 }
+
+/* ===== STAGGER ANIMATION (entry) ===== */
+@keyframes treeItemFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.tree-item.stagger-in {
+    animation: treeItemFadeIn 0.25s ease-out both;
+}
 .tree-item:hover { background-color: var(--md-sys-color-surface-container-high); }
 
 /* Keyboard selection state (persistent highlight) */
