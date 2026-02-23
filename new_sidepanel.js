@@ -109,6 +109,71 @@ let selectedNodeIds = new Set(); // Multi-select: all currently selected node ID
 let selectionAnchorId = null; // Shift+Click range anchor
 let staggerAnimationEnabled = false; // Controls stagger entry animation (only on initial load)
 
+// --- UNDO/REDO ---
+const undoStack = []; // Array of { snapshot: string (JSON), description: string }
+const redoStack = []; // Array of { snapshot: string (JSON), description: string }
+const MAX_UNDO = 50;  // Max history entries
+
+/**
+ * Saves a snapshot of current treeData before a destructive operation.
+ * Call this BEFORE mutating treeData.
+ * @param {string} description - Human-readable description for toast (e.g. "Delete: My Folder")
+ */
+function pushUndoState(description) {
+    undoStack.push({
+        snapshot: JSON.stringify(treeData),
+        description: description || 'Action'
+    });
+    // Trim oldest entries if over limit
+    while (undoStack.length > MAX_UNDO) undoStack.shift();
+    // Any new action invalidates the redo stack
+    redoStack.length = 0;
+}
+
+/**
+ * Undo: restores treeData to the previous snapshot.
+ */
+function performUndo() {
+    if (undoStack.length === 0) {
+        showToast("Nothing to undo");
+        return;
+    }
+    const entry = undoStack.pop();
+    // Save current state to redo stack
+    redoStack.push({
+        snapshot: JSON.stringify(treeData),
+        description: entry.description
+    });
+    // Restore snapshot
+    treeData = JSON.parse(entry.snapshot);
+    saveData();
+    setSelectedNode(null);
+    refreshAll();
+    showToast(`\u21a9 Undo: ${entry.description}`);
+}
+
+/**
+ * Redo: re-applies the last undone action.
+ */
+function performRedo() {
+    if (redoStack.length === 0) {
+        showToast("Nothing to redo");
+        return;
+    }
+    const entry = redoStack.pop();
+    // Save current state to undo stack (without clearing redo)
+    undoStack.push({
+        snapshot: JSON.stringify(treeData),
+        description: entry.description
+    });
+    // Restore redo snapshot
+    treeData = JSON.parse(entry.snapshot);
+    saveData();
+    setSelectedNode(null);
+    refreshAll();
+    showToast(`\u21aa Redo: ${entry.description}`);
+}
+
 // --- URL DETECTION ---
 const URL_REGEX = /https?:\/\/[^\s"'<>]+/gi;
 
@@ -975,6 +1040,20 @@ function setupAppEvents() {
             return;
         }
 
+        // --- CTRL+Z: Undo ---
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+            e.preventDefault();
+            performUndo();
+            return;
+        }
+
+        // --- CTRL+Y / CTRL+SHIFT+Z: Redo ---
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+            e.preventDefault();
+            performRedo();
+            return;
+        }
+
         // --- ARROW UP / ARROW DOWN ---
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault();
@@ -1290,6 +1369,7 @@ function setupAppEvents() {
 
                     // Validación básica para asegurar que es un formato válido
                     if (Array.isArray(importedData)) {
+                        pushUndoState('Import (replace)');
                         treeData = importedData;
                         saveData();     // Guardar en Storage
                         refreshAll();   // Actualizar UI V2
@@ -1345,6 +1425,7 @@ function setupAppEvents() {
                     };
 
                     // Append to existing data (never overwrites)
+                    pushUndoState('Import (merge)');
                     treeData.push(wrapperFolder);
                     saveData();
                     refreshAll();
@@ -1372,6 +1453,7 @@ function setupAppEvents() {
             icon: 'danger'
         }).then(confirmed => {
             if (confirmed) {
+                pushUndoState('Factory Reset');
                 treeData = [{
                     id: genId(),
                     name: "My Commands",
@@ -1505,6 +1587,7 @@ function performMove(sourceId, targetId, action) {
     if (!sourceList) return;
     const sIdx = sourceList.findIndex(n => String(n.id) === String(sourceId));
     if (sIdx === -1) return;
+    pushUndoState(`Move: ${sourceList[sIdx].name || 'Untitled'}`);
     const item = sourceList.splice(sIdx, 1)[0];
     if (action === 'inside') {
         const target = findNode(treeData, targetId);
@@ -1566,6 +1649,7 @@ function execPaste() {
         showToast("✅ Moved");
     }
     else {
+        pushUndoState(`Paste: ${appClipboard.data.name || 'Untitled'}`);
         const copy = cloneNode(appClipboard.data);
         if (!target.children) target.children = [];
         target.children.push(copy);
@@ -1581,6 +1665,8 @@ function execDelete(id) {
     if (list) {
         const idx = list.findIndex(n => String(n.id) === String(id));
         if (idx !== -1) {
+            const node = list[idx];
+            pushUndoState(`Delete: ${node.name || 'Untitled'}`);
             list.splice(idx, 1);
             saveData();
             refreshAll();
@@ -1632,6 +1718,7 @@ function execDeleteMultiple() {
 
     showConfirmModal({ title, message, icon: 'delete' }).then(confirmed => {
         if (confirmed) {
+            pushUndoState(`Delete ${count} items`);
             // Delete from leaves up — use recursive removal to avoid parent-child conflicts
             deleteNodesFromTree(treeData, idsToDelete);
             saveData();
@@ -1662,6 +1749,8 @@ function deleteNodesFromTree(nodes, idsSet) {
 function performMoveMultiple(targetId, action) {
     const idsToMove = [...selectedNodeIds].filter(id => String(id) !== String(targetId));
     if (idsToMove.length === 0) return;
+
+    pushUndoState(`Move ${idsToMove.length} items`);
 
     // Collect nodes first, then remove, then insert
     const nodesToMove = [];
@@ -1852,6 +1941,7 @@ function addItemToTree(parentId, item) {
 function updateItem(id, updates) {
     const node = findNode(treeData, id);
     if (node) {
+        pushUndoState(`Update: ${node.name || 'Untitled'}`);
         Object.assign(node, updates);
         saveData();
         refreshAll();
@@ -2160,6 +2250,13 @@ function saveInlineEdit() {
         }
         showToast('⚠️ Name is required');
         return;
+    }
+
+    // Save undo state before applying edits
+    if (inlineEditState.mode === 'edit') {
+        pushUndoState(`Edit: ${node.name || 'Untitled'}`);
+    } else if (inlineEditState.mode === 'add') {
+        pushUndoState(`Add: ${name}`);
     }
 
     node.name = name;
