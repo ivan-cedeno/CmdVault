@@ -633,6 +633,177 @@ function renderTree(filter) {
 
     // Disable stagger after first render so subsequent refreshes are instant
     if (shouldAnimate) staggerAnimationEnabled = false;
+
+    // Re-attach breadcrumb scroll observer after tree re-render
+    setupBreadcrumbObserver();
+}
+
+// ==========================================================================
+//  BREADCRUMB — Folder path indicator on deep scroll
+// ==========================================================================
+
+let breadcrumbObserver = null;
+let currentBreadcrumbFolderId = null;
+
+/**
+ * Sets up an IntersectionObserver on all folder tree-items inside #tree-container.
+ * As the user scrolls, detects the topmost visible folder and updates the breadcrumb.
+ */
+function setupBreadcrumbObserver() {
+    // Disconnect previous observer
+    if (breadcrumbObserver) {
+        breadcrumbObserver.disconnect();
+        breadcrumbObserver = null;
+    }
+
+    const scrollRoot = document.querySelector('.main-content');
+    const breadcrumb = document.getElementById('breadcrumb-bar');
+    if (!scrollRoot || !breadcrumb) return;
+
+    // Collect all folder tree-item elements (they have type-folder class)
+    const folderItems = document.querySelectorAll('#tree-container .tree-item.type-folder');
+    if (folderItems.length === 0) {
+        breadcrumb.classList.add('hidden');
+        return;
+    }
+
+    // Use scroll event for precise top-folder detection
+    // (IntersectionObserver can be imprecise with nested sticky elements)
+    scrollRoot.removeEventListener('scroll', handleBreadcrumbScroll);
+    scrollRoot.addEventListener('scroll', handleBreadcrumbScroll, { passive: true });
+
+    // Initial check
+    handleBreadcrumbScroll();
+}
+
+/**
+ * Scroll handler: finds the topmost visible folder in the scroll viewport
+ * and updates the breadcrumb bar with its ancestor path.
+ */
+function handleBreadcrumbScroll() {
+    const scrollRoot = document.querySelector('.main-content');
+    const breadcrumb = document.getElementById('breadcrumb-bar');
+    const treeContainer = document.getElementById('tree-container');
+    if (!scrollRoot || !breadcrumb || !treeContainer) return;
+
+    const scrollTop = scrollRoot.scrollTop;
+    const scrollRect = scrollRoot.getBoundingClientRect();
+
+    // Get the commands-wrapper position to know if tree is even visible
+    const wrapper = document.getElementById('commands-wrapper');
+    if (!wrapper) return;
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    // If the commands section isn't scrolled into view (i.e., user is above it), hide breadcrumb
+    if (wrapperRect.top > scrollRect.top + 60) {
+        breadcrumb.classList.add('hidden');
+        currentBreadcrumbFolderId = null;
+        return;
+    }
+
+    // Find ALL folder items and their positions
+    const folderItems = treeContainer.querySelectorAll('.tree-item.type-folder');
+    if (folderItems.length === 0) {
+        breadcrumb.classList.add('hidden');
+        currentBreadcrumbFolderId = null;
+        return;
+    }
+
+    // Find the topmost folder that is at or above the scroll viewport top
+    // (i.e., has been scrolled past or is right at the top)
+    let topFolder = null;
+    const refLine = scrollRect.top + 80; // reference line slightly below top (accounts for top-bar + breadcrumb)
+
+    for (const item of folderItems) {
+        const rect = item.getBoundingClientRect();
+        // Folder is considered "current" if its top edge is at or above the reference line
+        if (rect.top <= refLine) {
+            topFolder = item;
+        } else {
+            break; // Folders are in DOM order (top to bottom), so once past, stop
+        }
+    }
+
+    if (!topFolder) {
+        breadcrumb.classList.add('hidden');
+        currentBreadcrumbFolderId = null;
+        return;
+    }
+
+    const folderId = topFolder.dataset.nodeId;
+
+    // Only update if the folder changed (performance optimization)
+    if (folderId === currentBreadcrumbFolderId) return;
+    currentBreadcrumbFolderId = folderId;
+
+    // Build the ancestor path
+    const path = getAncestorPath(treeData, folderId);
+    if (path.length === 0) {
+        breadcrumb.classList.add('hidden');
+        return;
+    }
+
+    // Only show breadcrumb when we're scrolled deep enough (at least 1 folder depth)
+    // or when the top folder is scrolled past the header
+    const commandsHeader = document.getElementById('commands-header');
+    const headerRect = commandsHeader ? commandsHeader.getBoundingClientRect() : null;
+    if (headerRect && headerRect.bottom > scrollRect.top) {
+        // Header is still visible, no need for breadcrumb
+        breadcrumb.classList.add('hidden');
+        return;
+    }
+
+    renderBreadcrumb(breadcrumb, path);
+    breadcrumb.classList.remove('hidden');
+}
+
+/**
+ * Renders breadcrumb content with clickable folder segments.
+ * @param {HTMLElement} container - The breadcrumb bar element
+ * @param {Array} path - Array of folder nodes from root to current
+ */
+function renderBreadcrumb(container, path) {
+    container.innerHTML = '';
+
+    // Root icon
+    const rootIcon = document.createElement('span');
+    rootIcon.className = 'breadcrumb-root';
+    rootIcon.innerHTML = '📂';
+    rootIcon.title = 'All Commands';
+    rootIcon.onclick = () => {
+        const treeContainer = document.getElementById('tree-container');
+        if (treeContainer) treeContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    container.appendChild(rootIcon);
+
+    path.forEach((node, i) => {
+        // Separator
+        const sep = document.createElement('span');
+        sep.className = 'breadcrumb-sep';
+        sep.textContent = '›';
+        container.appendChild(sep);
+
+        // Folder name segment
+        const segment = document.createElement('span');
+        segment.className = 'breadcrumb-segment';
+        if (i === path.length - 1) segment.classList.add('active');
+        segment.textContent = node.name || 'Untitled';
+        segment.title = node.name || 'Untitled';
+
+        // Apply folder color if present
+        const displayColor = getDisplayColor(node.color, currentTheme);
+        if (displayColor) segment.style.color = displayColor;
+
+        // Click to scroll to that folder
+        segment.onclick = () => {
+            const el = document.querySelector(`#tree-container [data-node-id="${node.id}"] > .item-header`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setSelectedNode(node.id);
+            }
+        };
+        container.appendChild(segment);
+    });
 }
 
 /**
@@ -2506,6 +2677,31 @@ function findParentFolderId(nodes, id, parentId = null) {
         }
     }
     return undefined;
+}
+
+/**
+ * Builds the ancestor path (array of folder nodes) from root to the given nodeId.
+ * Returns array like [grandparent, parent, node] for breadcrumb display.
+ */
+function getAncestorPath(nodes, nodeId) {
+    const path = [];
+    function walk(list) {
+        for (const n of list) {
+            if (String(n.id) === String(nodeId)) {
+                path.push(n);
+                return true;
+            }
+            if (n.children && n.type === 'folder') {
+                if (walk(n.children)) {
+                    path.unshift(n);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    walk(nodes);
+    return path;
 }
 
 function isDescendant(parentId, childId) {
