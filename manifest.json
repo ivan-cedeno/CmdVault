@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CdmVault",
-  "version": "4.0.1",
-  "description": "Extension to store and manage sys-admin commands",
+  "version": "1.0.0",
+  "description": "Command Utility for Product Support Engineers.",
   "permissions": [
     "sidePanel",
     "storage",
