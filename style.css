@@ -2557,3 +2557,89 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     background-color: #fbbf24;
     color: #1e293b;
 }
+
+/* ===== VERSION PICKER MODAL ===== */
+
+.version-picker-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.15s ease;
+}
+
+.version-picker-box {
+    background: var(--md-sys-color-surface-container, #1e1e2e);
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1));
+    padding: 20px;
+    min-width: 280px;
+    max-width: 360px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.version-picker-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1));
+}
+
+.version-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.version-picker-item {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1));
+    background: var(--md-sys-color-surface-container-high, rgba(255,255,255,0.05));
+    color: var(--md-sys-color-on-surface, #e0e0e0);
+    font-size: 13px;
+    font-family: var(--font-ui, 'Inter', sans-serif);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+}
+
+.version-picker-item:hover {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary, #fff);
+    border-color: transparent;
+    transform: translateX(4px);
+}
+
+.version-picker-item.latest {
+    border-color: var(--md-sys-color-primary);
+    font-weight: 600;
+}
+
+.version-picker-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1));
+}
+
+/* Light mode */
+.theme-light .version-picker-box {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+.theme-light .version-picker-item {
+    background: rgba(0, 0, 0, 0.03);
+    color: #1e293b;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+.theme-light .version-picker-item:hover {
+    background: var(--md-sys-color-primary);
+    color: #fff;
+}

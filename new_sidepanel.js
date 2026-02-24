@@ -1,6 +1,7 @@
 const FOLDER_COLORS = ['#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#7C4DFF', '#CFD8DC', '#424242'];
 
 const GIST_FILENAME = 'ivan_helper_backup.json';
+const BACKUP_MAX_VERSIONS = 3; // Keep last N versioned backups in Gist
 
 // --- SMART CLOUD TAGS ---
 const CLOUD_TAG_CONFIG = {
@@ -3330,10 +3331,16 @@ async function uploadToGist(isRetry = false) {
 
     if (!isRetry) showToast("☁️ Syncing with GitHub...");
 
-    const body = {
-        description: "Ivan's Helper Backup (CmdVault)",
-        public: false,
-        files: { [GIST_FILENAME]: { content: JSON.stringify(treeData, null, 2) } }
+    // Build versioned filename with timestamp (e.g. backup_2026-02-23_15-30.json)
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
+    const versionedName = `backup_${ts}.json`;
+    const content = JSON.stringify(treeData, null, 2);
+
+    // Files object: current backup + new versioned snapshot
+    const files = {
+        [GIST_FILENAME]: { content },
+        [versionedName]: { content }
     };
 
     let gistId = localStorage.getItem('gistId');
@@ -3353,7 +3360,11 @@ async function uploadToGist(isRetry = false) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/vnd.github.v3+json'
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+                description: "CmdVault Backup (Versioned)",
+                public: false,
+                files
+            })
         });
 
         if (response.status === 403 || response.status === 429) {
@@ -3375,6 +3386,9 @@ async function uploadToGist(isRetry = false) {
         const data = await response.json();
         if (data.id) localStorage.setItem('gistId', data.id);
 
+        // Prune old versioned backups — keep only the last N
+        await pruneOldBackups(data);
+
         showToast("✅ Backup uploaded");
         updateSyncIcon('success');
 
@@ -3384,10 +3398,43 @@ async function uploadToGist(isRetry = false) {
     }
 }
 
+/**
+ * Removes old versioned backups from the Gist, keeping only the latest N.
+ * Versioned files match pattern: backup_YYYY-MM-DD_HH-MM.json
+ * @param {object} gistData - The Gist response object with files.
+ */
+async function pruneOldBackups(gistData) {
+    const fileNames = Object.keys(gistData.files || {});
+    const versionedFiles = fileNames
+        .filter(f => /^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/.test(f))
+        .sort(); // Alphabetical = chronological for this format
+
+    if (versionedFiles.length <= BACKUP_MAX_VERSIONS) return; // Nothing to prune
+
+    // Files to delete (oldest first)
+    const toDelete = versionedFiles.slice(0, versionedFiles.length - BACKUP_MAX_VERSIONS);
+    const deleteFiles = {};
+    toDelete.forEach(f => { deleteFiles[f] = null; }); // null = delete in GitHub API
+
+    try {
+        await fetch(`https://api.github.com/gists/${gistData.id}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${ghToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ files: deleteFiles })
+        });
+        console.log(`🗑️ Pruned ${toDelete.length} old backup(s):`, toDelete);
+    } catch (e) {
+        console.warn('Prune failed (non-critical):', e.message);
+    }
+}
+
 async function downloadFromGist() {
     cancelInlineEdit();
     if (!ghToken) return showToast("❌ Save GitHub Token first");
-    showToast("📥 Downloading...");
+    showToast("📥 Fetching backups...");
 
     try {
         const responseGists = await fetch('https://api.github.com/gists', {
@@ -3398,24 +3445,143 @@ async function downloadFromGist() {
 
         if (!remoteGist) return showToast("❓ No backup found");
 
-        // Guardamos el ID para futuras sincronizaciones
+        // Save Gist ID for future syncs
         localStorage.setItem('gistId', remoteGist.id);
 
-        const rawData = await fetch(remoteGist.files[GIST_FILENAME].raw_url);
-        const data = await rawData.json();
+        // Collect all available versions
+        const fileNames = Object.keys(remoteGist.files);
+        const versionedFiles = fileNames
+            .filter(f => /^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/.test(f))
+            .sort()
+            .reverse(); // Newest first
 
-        if (data) {
-            treeData = data;
-            // IMPORTANTE: Aquí adaptamos a la V2 usando refreshAll()
-            chrome.storage.local.set({ linuxTree: treeData }, () => {
-                refreshAll();
+        // Build version list: current + versioned snapshots
+        const versions = [];
+
+        // Always add the main/current backup first
+        if (remoteGist.files[GIST_FILENAME]) {
+            versions.push({
+                label: '📌 Latest (current)',
+                filename: GIST_FILENAME,
+                raw_url: remoteGist.files[GIST_FILENAME].raw_url
             });
-            showToast("✅ Data restored");
         }
+
+        // Add versioned snapshots
+        versionedFiles.forEach(f => {
+            // Parse timestamp from filename: backup_2026-02-23_15-30.json
+            const match = f.match(/backup_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})\.json/);
+            if (match) {
+                const [, y, mo, d, h, mi] = match;
+                const dateStr = `${y}-${mo}-${d} ${h}:${mi}`;
+                versions.push({
+                    label: `🕒 ${dateStr}`,
+                    filename: f,
+                    raw_url: remoteGist.files[f].raw_url
+                });
+            }
+        });
+
+        // If only 1 version, restore directly without picker
+        if (versions.length <= 1) {
+            await restoreFromGistFile(versions[0].raw_url, versions[0].label);
+            return;
+        }
+
+        // Show version picker modal
+        showVersionPicker(versions);
+
     } catch (e) {
         console.error(e);
         showToast("❌ Download error");
     }
+}
+
+/**
+ * Restores treeData from a specific Gist file URL.
+ * @param {string} rawUrl - The raw URL of the Gist file.
+ * @param {string} label - Label for the toast message.
+ */
+async function restoreFromGistFile(rawUrl, label) {
+    try {
+        showToast("📥 Restoring...");
+        const rawData = await fetch(rawUrl);
+        const data = await rawData.json();
+
+        if (data) {
+            treeData = data;
+            chrome.storage.local.set({ linuxTree: treeData }, () => {
+                refreshAll();
+            });
+            showToast(`✅ Restored: ${label}`);
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("❌ Restore error");
+    }
+}
+
+/**
+ * Shows a modal with available backup versions to choose from.
+ * @param {Array} versions - Array of { label, filename, raw_url }.
+ */
+function showVersionPicker(versions) {
+    // Remove existing picker if any
+    const existing = document.getElementById('version-picker-overlay');
+    if (existing) existing.remove();
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'version-picker-overlay';
+    overlay.className = 'version-picker-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Select Backup Version');
+
+    // Create modal box
+    const box = document.createElement('div');
+    box.className = 'version-picker-box';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'version-picker-header';
+    header.innerHTML = '<h3 style="margin:0; color:var(--md-sys-color-primary);">📦 Select Backup Version</h3><p style="margin:4px 0 0 0; font-size:12px; opacity:0.7;">Choose which version to restore</p>';
+    box.appendChild(header);
+
+    // Version list
+    const list = document.createElement('div');
+    list.className = 'version-picker-list';
+
+    versions.forEach((v, i) => {
+        const item = document.createElement('button');
+        item.className = 'version-picker-item';
+        if (i === 0) item.classList.add('latest');
+        item.textContent = v.label;
+        item.onclick = async () => {
+            overlay.remove();
+            await restoreFromGistFile(v.raw_url, v.label);
+        };
+        list.appendChild(item);
+    });
+
+    box.appendChild(list);
+
+    // Cancel button
+    const actions = document.createElement('div');
+    actions.className = 'version-picker-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn-secondary-modal';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => overlay.remove();
+    actions.appendChild(cancelBtn);
+    box.appendChild(actions);
+
+    overlay.appendChild(box);
+
+    // Close on overlay click
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    document.body.appendChild(overlay);
 }
 
 async function autoSyncToCloud() {
