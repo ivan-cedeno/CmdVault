@@ -2432,6 +2432,23 @@ function changeTheme(themeName) {
 }
 
 // ==========================================================================
+/**
+ * Collects all unique tags from the entire tree.
+ * Traverses treeData recursively, deduplicates, and returns sorted lowercase array.
+ * Used to power the tag suggestion chips in the inline editor.
+ */
+function collectAllTags(nodes) {
+    const tagSet = new Set();
+    function walk(list) {
+        for (const n of list) {
+            if (Array.isArray(n.tags)) n.tags.forEach(t => tagSet.add(t.toLowerCase()));
+            if (n.children) walk(n.children);
+        }
+    }
+    walk(nodes);
+    return [...tagSet].sort();
+}
+
 //  INLINE EDITING SYSTEM (Modo Edicion Rapida)
 // ==========================================================================
 
@@ -2504,6 +2521,70 @@ function buildInlineForm(node) {
         const tagsValue = Array.isArray(node.tags) ? node.tags.join(', ') : '';
         const tagsGroup = createFieldGroup('Tags', 'input', 'inline-edit-tags', tagsValue, 'tag1, tag2, tag3...');
         form.appendChild(tagsGroup);
+
+        // TAG SUGGESTIONS — clickable chips from existing tags
+        const allTags = collectAllTags(treeData);
+        if (allTags.length > 0) {
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'tag-suggestions';
+
+            const tagsInput = tagsGroup.querySelector('.inline-edit-tags');
+
+            /** Parses the input value into an array of current tag strings */
+            const getCurrentTags = () => (tagsInput.value || '')
+                .split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+
+            /** Renders/refreshes the suggestion chips based on current input */
+            const refreshChips = () => {
+                suggestionsDiv.innerHTML = '';
+                const currentTags = getCurrentTags();
+                const available = allTags.filter(t => !currentTags.includes(t));
+
+                if (available.length === 0) {
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }
+                suggestionsDiv.style.display = '';
+
+                available.forEach(tag => {
+                    const chip = document.createElement('span');
+                    chip.className = 'tag-chip';
+
+                    // Apply cloud/precaution styling
+                    const cloudConfig = CLOUD_TAG_CONFIG[tag];
+                    if (cloudConfig) {
+                        chip.classList.add(cloudConfig.cssClass);
+                        chip.innerHTML = `<span class="tag-icon">${cloudConfig.icon}</span>${tag}`;
+                    } else if (tag === 'precaution') {
+                        chip.classList.add('precaution');
+                        chip.textContent = tag;
+                    } else {
+                        chip.textContent = tag;
+                    }
+
+                    chip.onclick = (e) => {
+                        e.stopPropagation();
+                        // Enforce max 5 tags
+                        if (getCurrentTags().length >= 5) {
+                            showToast('⚠️ Max 5 tags allowed');
+                            return;
+                        }
+                        // Append tag to input
+                        const current = tagsInput.value.trim();
+                        tagsInput.value = current ? `${current}, ${tag}` : tag;
+                        refreshChips();
+                    };
+
+                    suggestionsDiv.appendChild(chip);
+                });
+            };
+
+            // Live sync: refresh chips when user types in the tag input
+            if (tagsInput) tagsInput.addEventListener('input', refreshChips);
+
+            refreshChips();
+            form.appendChild(suggestionsDiv);
+        }
     }
 
     // ACTION BUTTONS
