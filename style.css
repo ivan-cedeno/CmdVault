@@ -2466,3 +2466,94 @@ body.theme-nord .sh-number   { color: #B48EAD; }
 .update-info.hidden {
     display: none;
 }
+
+/* ===== TAG SUGGESTIONS (Inline Editor) ===== */
+
+.tag-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 8px;
+    background: var(--md-sys-color-surface-container, rgba(255, 255, 255, 0.04));
+    border-radius: var(--radius-sm, 8px);
+    border: 1px dashed var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.1));
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+.tag-chip {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background-color: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.08));
+    color: var(--md-sys-color-on-surface-variant, #ccc);
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.15));
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+.tag-chip:hover {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary, #fff);
+    border-color: transparent;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.tag-chip:active {
+    transform: scale(0.95);
+}
+
+/* Cloud-specific chip colors */
+.tag-chip.cloud-aws {
+    color: #FF9900;
+    border-color: rgba(255, 153, 0, 0.3);
+}
+.tag-chip.cloud-aws:hover {
+    background-color: #FF9900;
+    color: #1e293b;
+}
+
+.tag-chip.cloud-azure {
+    color: #0078D4;
+    border-color: rgba(0, 120, 212, 0.3);
+}
+.tag-chip.cloud-azure:hover {
+    background-color: #0078D4;
+    color: #fff;
+}
+
+.tag-chip.cloud-gcp {
+    color: #34A853;
+    border-color: rgba(52, 168, 83, 0.3);
+}
+.tag-chip.cloud-gcp:hover {
+    background-color: #34A853;
+    color: #fff;
+}
+
+.tag-chip.cloud-all {
+    color: #9C27B0;
+    border-color: rgba(156, 39, 176, 0.3);
+}
+.tag-chip.cloud-all:hover {
+    background-color: #9C27B0;
+    color: #fff;
+}
+
+.tag-chip.precaution {
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.3);
+}
+.tag-chip.precaution:hover {
+    background-color: #fbbf24;
+    color: #1e293b;
+}
