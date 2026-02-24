@@ -2855,3 +2855,198 @@ body.theme-light .breadcrumb-bar {
 body.theme-light .breadcrumb-segment.active {
     background: rgba(103, 80, 164, 0.08);
 }
+
+/* ==========================================================================
+   CHAIN EDITOR — Command Chaining (⛓️ mode)
+   ========================================================================== */
+
+.chain-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chain-connector-select {
+    max-width: 220px;
+    cursor: pointer;
+}
+
+.chain-steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chain-step-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+}
+
+.chain-step-num {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--md-sys-color-primary);
+    min-width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+    font-family: var(--font-code);
+}
+
+.chain-step-input {
+    flex: 1;
+    font-family: var(--font-code) !important;
+    font-size: 12px !important;
+    padding: 5px 8px !important;
+    min-width: 0;
+}
+
+.chain-step-move {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.35;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.chain-step-move:hover:not(:disabled) {
+    opacity: 1;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-primary);
+}
+.chain-step-move:disabled {
+    opacity: 0.12;
+    cursor: not-allowed;
+}
+
+.chain-step-delete {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.35;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.chain-step-delete:hover:not(:disabled) {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--md-sys-color-error, #ef4444);
+}
+.chain-step-delete:disabled {
+    opacity: 0.12;
+    cursor: not-allowed;
+}
+
+.chain-add-step-btn {
+    align-self: flex-start;
+    padding: 4px 12px;
+    border: 1px dashed var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.15));
+    background: transparent;
+    color: var(--md-sys-color-primary);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.chain-add-step-btn:hover {
+    background: var(--md-sys-color-surface-container-high);
+    border-color: var(--md-sys-color-primary);
+}
+
+.chain-preview-group {
+    margin-top: 4px;
+}
+
+.chain-preview {
+    background: var(--md-sys-color-surface-container-high, rgba(0, 0, 0, 0.2));
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--font-code);
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 60px;
+    overflow-y: auto;
+    opacity: 0.7;
+    margin: 0;
+}
+
+/* --- Chain Display in Tree (expanded view) --- */
+
+.chain-step-display {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 1px 0;
+}
+
+.chain-step-display-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--md-sys-color-primary);
+    min-width: 16px;
+    text-align: right;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.chain-connector-display {
+    color: var(--md-sys-color-primary);
+    font-weight: 700;
+    opacity: 0.5;
+}
+
+/* --- Chain Steps Badge (in header) --- */
+
+.chain-steps-badge {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.06));
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.1));
+    padding: 1px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+}
+
+.tree-item:hover .chain-steps-badge {
+    opacity: 1;
+    border-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-primary);
+}
+
+/* Light theme chain overrides */
+body.theme-light .chain-preview {
+    background: rgba(0, 0, 0, 0.04);
+}
+body.theme-light .chain-step-delete:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+}

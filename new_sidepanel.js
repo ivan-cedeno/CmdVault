@@ -143,6 +143,8 @@ function showCmdTooltip(headerEl, node) {
         // 🔑 Masked: don't reveal command in tooltip
         if (node.icon === '🔑') {
             cmdEl.textContent = '🔑 ••••••••••••';
+        } else if (node.chain && node.chain.steps) {
+            cmdEl.textContent = `⛓️ ${node.chain.steps.length} steps (${node.chain.connector})`;
         } else {
             // Truncate: show first line only if multiline, cap at 120 chars
             let preview = node.cmd.trim();
@@ -1021,6 +1023,15 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         header.appendChild(tagsDiv);
     }
 
+    // Chain steps badge
+    if (node.type === 'command' && node.chain && node.chain.steps) {
+        const chainBadge = document.createElement('span');
+        chainBadge.className = 'chain-steps-badge';
+        chainBadge.textContent = `${node.chain.steps.length} steps`;
+        chainBadge.title = `Chain: ${node.chain.steps.length} step${node.chain.steps.length !== 1 ? 's' : ''} joined by ${node.chain.connector}`;
+        header.appendChild(chainBadge);
+    }
+
     header.onclick = (e) => {
         if (inlineEditState && String(inlineEditState.id) === String(node.id)) return;
 
@@ -1144,6 +1155,27 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
                 }, 5000);
             };
             pre.addEventListener('click', autoHide);
+        } else if (node.chain && node.chain.steps && node.expanded) {
+            // Chain expanded view: show numbered steps
+            node.chain.steps.forEach((step, i) => {
+                const stepLine = document.createElement('div');
+                stepLine.className = 'chain-step-display';
+                const stepNum = document.createElement('span');
+                stepNum.className = 'chain-step-display-num';
+                stepNum.textContent = `${i + 1}.`;
+                stepLine.appendChild(stepNum);
+                const stepCmd = document.createElement('span');
+                stepCmd.innerHTML = highlightSyntax(step);
+                stepLine.appendChild(stepCmd);
+                if (i < node.chain.steps.length - 1) {
+                    const conn = document.createElement('span');
+                    conn.className = 'chain-connector-display';
+                    conn.textContent = ` ${node.chain.connector}`;
+                    stepLine.appendChild(conn);
+                }
+                pre.appendChild(stepLine);
+            });
+            pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap);
         } else {
             pre.innerHTML = highlightSyntax(String(node.cmd || ""));
             pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap);
@@ -1940,7 +1972,28 @@ function setupAppEvents() {
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
             else if (id === 'ctx-add-cmd') { execAdd(contextTargetId, 'command'); close(); }
             else if (target.classList.contains('icon-option')) {
-                updateItem(contextTargetId, { icon: target.dataset.icon });
+                const newIcon = target.dataset.icon;
+                const node = findNode(treeData, contextTargetId);
+                if (node) {
+                    const updates = { icon: newIcon };
+
+                    // Converting TO chain mode: initialize chain from existing cmd
+                    if (newIcon === '⛓️' && !node.chain) {
+                        const existingCmd = (node.cmd || '').trim();
+                        updates.chain = {
+                            connector: '&&',
+                            steps: existingCmd ? [existingCmd] : ['']
+                        };
+                    }
+
+                    updateItem(contextTargetId, updates);
+
+                    // Converting FROM chain mode: keep concatenated cmd, remove chain
+                    if (newIcon !== '⛓️' && node.chain) {
+                        delete node.chain;
+                        saveData();
+                    }
+                }
                 close();
             }
         };
@@ -2729,6 +2782,10 @@ function isDescendant(parentId, childId) {
 function cloneNode(node) {
     const copy = { ...node, id: genId() };
     if (copy.children) copy.children = copy.children.map(c => cloneNode(c));
+    // Deep-copy chain to avoid shared references
+    if (copy.chain) {
+        copy.chain = { connector: copy.chain.connector, steps: [...copy.chain.steps] };
+    }
     return copy;
 }
 
@@ -2808,6 +2865,204 @@ function createFieldGroup(label, tagName, className, value, placeholder) {
     return group;
 }
 
+/**
+ * Builds the chain editor UI for Command Chaining (⛓️ mode).
+ * Renders: connector selector, ordered step inputs with drag/reorder, add/remove, live preview.
+ */
+function buildChainEditor(node) {
+    // Initialize chain if not present
+    if (!node.chain) {
+        node.chain = {
+            connector: '&&',
+            steps: (node.cmd || '').trim() ? [(node.cmd || '').trim()] : ['']
+        };
+    }
+
+    const container = document.createElement('div');
+    container.className = 'chain-editor';
+
+    // --- CONNECTOR SELECTOR ---
+    const connectorGroup = document.createElement('div');
+    connectorGroup.className = 'inline-edit-field-group';
+    const connectorLabel = document.createElement('label');
+    connectorLabel.className = 'inline-edit-label';
+    connectorLabel.textContent = 'Connector';
+    connectorGroup.appendChild(connectorLabel);
+
+    const connectorSelect = document.createElement('select');
+    connectorSelect.className = 'inline-edit-input chain-connector-select';
+    [
+        { val: '&&', label: '&& (stop on fail)' },
+        { val: ';',  label: ';  (run all)' },
+        { val: '|',  label: '|  (pipe output)' }
+    ].forEach(op => {
+        const opt = document.createElement('option');
+        opt.value = op.val;
+        opt.textContent = op.label;
+        if (op.val === node.chain.connector) opt.selected = true;
+        connectorSelect.appendChild(opt);
+    });
+    connectorGroup.appendChild(connectorSelect);
+    container.appendChild(connectorGroup);
+
+    // --- STEPS LABEL ---
+    const stepsLabel = document.createElement('label');
+    stepsLabel.className = 'inline-edit-label';
+    stepsLabel.textContent = 'Steps';
+    container.appendChild(stepsLabel);
+
+    // --- STEPS LIST ---
+    const stepsList = document.createElement('div');
+    stepsList.className = 'chain-steps-list';
+
+    const renderSteps = () => {
+        stepsList.innerHTML = '';
+        node.chain.steps.forEach((step, i) => {
+            const row = document.createElement('div');
+            row.className = 'chain-step-row';
+
+            // Step number
+            const num = document.createElement('span');
+            num.className = 'chain-step-num';
+            num.textContent = `${i + 1}.`;
+            row.appendChild(num);
+
+            // Step input
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'inline-edit-input chain-step-input';
+            input.value = step;
+            input.placeholder = `Step ${i + 1} command...`;
+            input.dataset.stepIndex = i;
+            input.addEventListener('input', () => {
+                node.chain.steps[i] = input.value;
+                updatePreview();
+            });
+            // Enter on step input: add new step after this one
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.ctrlKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    node.chain.steps.splice(i + 1, 0, '');
+                    renderSteps();
+                    const inputs = stepsList.querySelectorAll('.chain-step-input');
+                    if (inputs[i + 1]) inputs[i + 1].focus();
+                }
+                // Backspace on empty step: remove it and focus previous
+                if (e.key === 'Backspace' && input.value === '' && node.chain.steps.length > 1) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    node.chain.steps.splice(i, 1);
+                    renderSteps();
+                    const inputs = stepsList.querySelectorAll('.chain-step-input');
+                    const focusIdx = Math.max(0, i - 1);
+                    if (inputs[focusIdx]) inputs[focusIdx].focus();
+                }
+            });
+            row.appendChild(input);
+
+            // Move up button
+            const upBtn = document.createElement('button');
+            upBtn.className = 'chain-step-move';
+            upBtn.innerHTML = '▲';
+            upBtn.title = 'Move up';
+            upBtn.disabled = i === 0;
+            upBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (i > 0) {
+                    [node.chain.steps[i - 1], node.chain.steps[i]] = [node.chain.steps[i], node.chain.steps[i - 1]];
+                    renderSteps();
+                    updatePreview();
+                }
+            };
+            row.appendChild(upBtn);
+
+            // Move down button
+            const downBtn = document.createElement('button');
+            downBtn.className = 'chain-step-move';
+            downBtn.innerHTML = '▼';
+            downBtn.title = 'Move down';
+            downBtn.disabled = i === node.chain.steps.length - 1;
+            downBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (i < node.chain.steps.length - 1) {
+                    [node.chain.steps[i], node.chain.steps[i + 1]] = [node.chain.steps[i + 1], node.chain.steps[i]];
+                    renderSteps();
+                    updatePreview();
+                }
+            };
+            row.appendChild(downBtn);
+
+            // Delete button
+            const delBtn = document.createElement('button');
+            delBtn.className = 'chain-step-delete';
+            delBtn.innerHTML = '✕';
+            delBtn.title = 'Remove step';
+            delBtn.disabled = node.chain.steps.length <= 1;
+            delBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (node.chain.steps.length <= 1) return;
+                node.chain.steps.splice(i, 1);
+                renderSteps();
+                updatePreview();
+            };
+            row.appendChild(delBtn);
+
+            stepsList.appendChild(row);
+        });
+    };
+
+    renderSteps();
+    container.appendChild(stepsList);
+
+    // --- ADD STEP BUTTON ---
+    const addBtn = document.createElement('button');
+    addBtn.className = 'chain-add-step-btn';
+    addBtn.innerHTML = '+ Add Step';
+    addBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        node.chain.steps.push('');
+        renderSteps();
+        const inputs = stepsList.querySelectorAll('.chain-step-input');
+        if (inputs.length > 0) inputs[inputs.length - 1].focus();
+        updatePreview();
+    };
+    container.appendChild(addBtn);
+
+    // --- PREVIEW ---
+    const previewGroup = document.createElement('div');
+    previewGroup.className = 'chain-preview-group';
+    const previewLabel = document.createElement('label');
+    previewLabel.className = 'inline-edit-label';
+    previewLabel.textContent = 'Preview';
+    previewGroup.appendChild(previewLabel);
+
+    const previewPre = document.createElement('pre');
+    previewPre.className = 'chain-preview';
+
+    const updatePreview = () => {
+        const connector = connectorSelect.value;
+        const sep = connector === '|' ? ' | ' : ` ${connector} `;
+        const fullCmd = node.chain.steps.filter(s => s.trim()).join(sep);
+        previewPre.textContent = fullCmd || '(empty)';
+    };
+
+    connectorSelect.addEventListener('change', () => {
+        node.chain.connector = connectorSelect.value;
+        updatePreview();
+    });
+
+    updatePreview();
+    previewGroup.appendChild(previewPre);
+    container.appendChild(previewGroup);
+
+    return container;
+}
+
 function buildInlineForm(node) {
     const form = document.createElement('div');
     form.className = 'inline-edit-form';
@@ -2821,9 +3076,15 @@ function buildInlineForm(node) {
         const descGroup = createFieldGroup('Description', 'input', 'inline-edit-desc', node.description || '', 'Enter description...');
         form.appendChild(descGroup);
 
-        // COMMAND (textarea)
-        const cmdGroup = createFieldGroup('Command', 'textarea', 'inline-edit-cmd', node.cmd || '', 'Enter command...');
-        form.appendChild(cmdGroup);
+        // COMMAND — Chain editor OR single textarea
+        const isChain = node.icon === '⛓️' || node.chain;
+        if (isChain) {
+            const chainEditor = buildChainEditor(node);
+            form.appendChild(chainEditor);
+        } else {
+            const cmdGroup = createFieldGroup('Command', 'textarea', 'inline-edit-cmd', node.cmd || '', 'Enter command...');
+            form.appendChild(cmdGroup);
+        }
 
         // TAGS
         const tagsValue = Array.isArray(node.tags) ? node.tags.join(', ') : '';
@@ -3024,11 +3285,49 @@ function saveInlineEdit() {
 
     if (node.type === 'command') {
         const descInput = form.querySelector('.inline-edit-desc');
-        const cmdInput = form.querySelector('.inline-edit-cmd');
         const tagsInput = form.querySelector('.inline-edit-tags');
 
         node.description = descInput ? descInput.value : '';
-        node.cmd = cmdInput ? cmdInput.value : '';
+
+        // CHAIN MODE: read from chain editor
+        const isChain = node.icon === '⛓️' || node.chain;
+        if (isChain && node.chain) {
+            const connectorSelect = form.querySelector('.chain-connector-select');
+            node.chain.connector = connectorSelect ? connectorSelect.value : '&&';
+
+            // Read step values from inputs
+            const stepInputs = form.querySelectorAll('.chain-step-input');
+            if (stepInputs.length > 0) {
+                node.chain.steps = Array.from(stepInputs).map(inp => inp.value);
+            }
+
+            // Remove empty steps
+            node.chain.steps = node.chain.steps.filter(s => s.trim().length > 0);
+
+            if (node.chain.steps.length === 0) {
+                showToast('⚠️ At least one step is required');
+                return;
+            }
+
+            // Auto-generate node.cmd from chain
+            const sep = node.chain.connector === '|' ? ' | ' : ` ${node.chain.connector} `;
+            node.cmd = node.chain.steps.join(sep);
+        } else {
+            // NORMAL MODE: read from textarea
+            const cmdInput = form.querySelector('.inline-edit-cmd');
+            node.cmd = cmdInput ? cmdInput.value : '';
+
+            // For new commands, validate command field
+            if (inlineEditState.mode === 'add' && !node.cmd.trim()) {
+                if (cmdInput) {
+                    cmdInput.classList.add('inline-edit-error');
+                    cmdInput.focus();
+                    setTimeout(() => cmdInput.classList.remove('inline-edit-error'), 2000);
+                }
+                showToast('⚠️ Command is required');
+                return;
+            }
+        }
 
         // Process tags (max 5 tags, 15 chars each)
         const tagsStr = tagsInput ? tagsInput.value : '';
@@ -3043,17 +3342,6 @@ function saveInlineEdit() {
             showToast('⚠️ Max 5 tags allowed');
         }
         node.tags = parsedTags;
-
-        // For new commands, validate command field
-        if (inlineEditState.mode === 'add' && !node.cmd.trim()) {
-            if (cmdInput) {
-                cmdInput.classList.add('inline-edit-error');
-                cmdInput.focus();
-                setTimeout(() => cmdInput.classList.remove('inline-edit-error'), 2000);
-            }
-            showToast('⚠️ Command is required');
-            return;
-        }
     }
 
     const wasAdd = inlineEditState.mode === 'add';
