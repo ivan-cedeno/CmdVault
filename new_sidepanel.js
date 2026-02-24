@@ -534,6 +534,48 @@ function refreshAll() {
     renderFavorites();
     updateHeaderIcons();
     restoreSelection();
+    updateSearchUI(filter);
+}
+
+/**
+ * Updates the search UI: result counter badge and clear button visibility.
+ * @param {string} filter - The current search filter string.
+ */
+function updateSearchUI(filter) {
+    const countEl = document.getElementById('search-result-count');
+    const clearBtn = document.getElementById('btn-search-clear');
+
+    if (!filter) {
+        if (countEl) { countEl.classList.add('hidden'); countEl.textContent = ''; }
+        if (clearBtn) clearBtn.classList.add('hidden');
+        return;
+    }
+
+    // Show clear button
+    if (clearBtn) clearBtn.classList.remove('hidden');
+
+    // Count visible leaf nodes (commands only, not folders)
+    const count = countVisibleNodes(treeData, filter);
+    if (countEl) {
+        countEl.classList.remove('hidden');
+        countEl.textContent = count === 0 ? 'No results' : `${count}`;
+    }
+}
+
+/**
+ * Counts the number of visible leaf nodes (commands) matching the filter.
+ */
+function countVisibleNodes(nodes, filter) {
+    let count = 0;
+    for (const n of nodes) {
+        if (!n) continue;
+        if (n.children) {
+            count += countVisibleNodes(n.children, filter);
+        } else if (isVisible(n, filter)) {
+            count++;
+        }
+    }
+    return count;
 }
 
 function updateHeaderIcons() {
@@ -1338,6 +1380,17 @@ function setupAppEvents() {
 
     const search = document.getElementById('search-input');
     if (search) search.oninput = (e) => refreshAll();
+
+    // Clear search button
+    const clearBtn = document.getElementById('btn-search-clear');
+    if (clearBtn && search) {
+        clearBtn.onclick = (e) => {
+            e.stopPropagation();
+            search.value = '';
+            search.focus();
+            refreshAll();
+        };
+    }
 
     // Ctrl+Space → focus search box (global shortcut)
     document.addEventListener('keydown', (e) => {
@@ -3164,24 +3217,50 @@ function isVisible(n, f) {
     if (!f) return true;
     const query = f.trim().toLowerCase();
 
-    // 1. Lógica V1: Búsqueda específica por Tags usando "#" (ej: #redes)
+    // 1. Tag search: #tagname
     if (query.startsWith('#')) {
         const tagToSearch = query.substring(1);
-        // Validamos que n.tags exista y sea un array antes de buscar
         const tagMatch = Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes(tagToSearch));
-
-        // Si el nodo cumple, es visible. Si no, revisamos si algún hijo cumple (para mostrar la carpeta padre)
         return n.children ? (tagMatch || n.children.some(c => isVisible(c, f))) : tagMatch;
     }
 
-    // 2. Lógica V1: Búsqueda General (Nombre, Comando o Tags)
+    // 2. Description search: d:keyword
+    if (query.startsWith('d:')) {
+        const descQuery = query.substring(2).trim();
+        if (!descQuery) return true;
+        const descMatch = (n.description || '').toLowerCase().includes(descQuery);
+        return n.children ? (descMatch || n.children.some(c => isVisible(c, f))) : descMatch;
+    }
+
+    // 3. Folder search: f:keyword
+    if (query.startsWith('f:')) {
+        const folderQuery = query.substring(2).trim();
+        if (!folderQuery) return true;
+        if (n.type === 'folder') {
+            const nameMatch = (n.name || '').toLowerCase().includes(folderQuery);
+            // Show folder if name matches, or if children folders match
+            return nameMatch || (n.children && n.children.some(c => isVisible(c, f)));
+        }
+        // Commands: show only if inside a matching parent (handled by parent rendering)
+        return n.children ? n.children.some(c => isVisible(c, f)) : false;
+    }
+
+    // 4. Command-only search: c:keyword
+    if (query.startsWith('c:')) {
+        const cmdQuery = query.substring(2).trim();
+        if (!cmdQuery) return true;
+        const cmdMatch = (n.cmd || '').toLowerCase().includes(cmdQuery);
+        return n.children ? (cmdMatch || n.children.some(c => isVisible(c, f))) : cmdMatch;
+    }
+
+    // 5. General search: name, command, description, and tags
     const nameMatch = (n.name || '').toLowerCase().includes(query);
     const cmdMatch = (n.cmd || '').toLowerCase().includes(query);
+    const descMatch = (n.description || '').toLowerCase().includes(query);
     const tagMatch = Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes(query));
 
-    const selfMatch = nameMatch || cmdMatch || tagMatch;
+    const selfMatch = nameMatch || cmdMatch || descMatch || tagMatch;
 
-    // Retorna true si el nodo coincide O si alguno de sus hijos coincide (recursividad)
     return n.children ? (selfMatch || n.children.some(c => isVisible(c, f))) : selfMatch;
 }
 
