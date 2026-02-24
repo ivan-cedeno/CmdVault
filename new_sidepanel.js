@@ -2592,13 +2592,24 @@ function updateItem(id, updates) {
     }
 }
 
+const MAX_FAVORITES = 10;
+
 function togglePin(id) {
     const node = findNode(treeData, id);
-    if (node) {
-        node.pinned = !node.pinned;
-        saveData();
-        refreshAll();
+    if (!node) return;
+
+    // Enforce max favorites limit when pinning (not when unpinning)
+    if (!node.pinned) {
+        const currentPinned = getAllPinnedItems(treeData);
+        if (currentPinned.length >= MAX_FAVORITES) {
+            showToast(`⚠️ Maximum ${MAX_FAVORITES} favorites allowed. Unpin one first.`);
+            return;
+        }
     }
+
+    node.pinned = !node.pinned;
+    saveData();
+    refreshAll();
 }
 
 // --- UTILS ---
@@ -3573,7 +3584,18 @@ function renderFavorites() {
 
     if (items.length > 0) {
         document.getElementById('quick-access-container').classList.remove('hidden');
-        items.forEach(n => list.appendChild(createNodeElement(n, '', true)));
+        items.forEach((n, i) => {
+            const el = createNodeElement(n, '', true);
+            // Add discrete numeric index badge
+            const row = el.querySelector('.tree-item');
+            if (row) {
+                const idx = document.createElement('span');
+                idx.className = 'fav-index';
+                idx.textContent = i + 1;
+                row.insertBefore(idx, row.firstChild);
+            }
+            list.appendChild(el);
+        });
     } else {
         document.getElementById('quick-access-container').classList.add('hidden');
     }
