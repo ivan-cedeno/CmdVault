@@ -412,6 +412,10 @@ input[type="text"]#search-input:focus {
     margin-bottom: 8px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+/* Allow sticky breadcrumb inside commands wrapper — overflow:hidden breaks position:sticky */
+#commands-wrapper {
+    overflow: visible;
+}
 .section-header {
     padding: 10px 12px;
     background: var(--md-sys-color-surface-container);
