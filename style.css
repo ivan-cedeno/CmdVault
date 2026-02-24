@@ -517,6 +517,25 @@ input[type="text"]#search-input:focus {
     margin-left: 2px;
 }
 
+/* Favorites index badge — discrete numeric indicator */
+.fav-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-code, 'JetBrains Mono', monospace);
+    color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container-high);
+    border-radius: 4px;
+    margin-right: 4px;
+    opacity: 0.5;
+    flex-shrink: 0;
+    user-select: none;
+}
+
 /* History items — clean CSS classes */
 .history-item {
     display: flex;
