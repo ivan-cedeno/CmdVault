@@ -393,6 +393,31 @@ body {
 .icon-btn:hover { background-color: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
 .icon-btn.danger:hover { background-color: var(--md-sys-color-error); color: #380d0d; }
 
+/* Data Management buttons — stacked icon + label */
+.icon-btn.data-btn {
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 4px;
+    font-size: 1.2rem;
+    line-height: 1;
+    border: 1px solid var(--md-sys-color-surface-container-high);
+    border-radius: var(--radius-md);
+    background: var(--md-sys-color-surface-container);
+}
+.icon-btn.data-btn span {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.75;
+}
+.icon-btn.data-btn:hover {
+    border-color: var(--md-sys-color-primary);
+}
+.icon-btn.data-btn:hover span {
+    opacity: 1;
+}
+
 .search-row { position: relative; width: 100%; margin-top: 10px; }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--md-sys-color-outline); font-size: 0.9rem; }
 input[type="text"]#search-input {
