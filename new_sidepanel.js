@@ -1975,6 +1975,7 @@ function setupAppEvents() {
                 const newIcon = target.dataset.icon;
                 const node = findNode(treeData, contextTargetId);
                 if (node) {
+                    const wasChain = !!node.chain;
                     const updates = { icon: newIcon };
 
                     // Converting TO chain mode: initialize chain from existing cmd
@@ -1989,9 +1990,16 @@ function setupAppEvents() {
                     updateItem(contextTargetId, updates);
 
                     // Converting FROM chain mode: keep concatenated cmd, remove chain
-                    if (newIcon !== '⛓️' && node.chain) {
+                    if (newIcon !== '⛓️' && wasChain) {
                         delete node.chain;
                         saveData();
+                    }
+
+                    // Auto-open chain editor when switching TO chain mode
+                    if (newIcon === '⛓️') {
+                        close();
+                        setTimeout(() => execEdit(contextTargetId), 100);
+                        return;
                     }
                 }
                 close();
