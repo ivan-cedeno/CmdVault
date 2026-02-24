@@ -2729,3 +2729,81 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     0% { opacity: 0; transform: translateY(-2px); }
     100% { opacity: 1; transform: translateY(0); }
 }
+
+/* ===== BREADCRUMB BAR ===== */
+
+.breadcrumb-bar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px;
+    background: var(--md-sys-color-surface-container);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.08));
+    font-size: 11px;
+    font-family: var(--font-ui, 'Inter', sans-serif);
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none; /* Firefox */
+    animation: breadcrumbSlideIn 0.2s ease-out;
+}
+.breadcrumb-bar::-webkit-scrollbar { display: none; }
+.breadcrumb-bar.hidden { display: none; }
+
+@keyframes breadcrumbSlideIn {
+    0% { opacity: 0; transform: translateY(-4px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.breadcrumb-root {
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+}
+.breadcrumb-root:hover { opacity: 1; }
+
+.breadcrumb-sep {
+    color: var(--md-sys-color-outline, #666);
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.5;
+    user-select: none;
+    flex-shrink: 0;
+    margin: 0 1px;
+}
+
+.breadcrumb-segment {
+    cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant);
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm, 6px);
+    transition: background 0.15s ease, color 0.15s ease;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+.breadcrumb-segment:hover {
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-primary);
+}
+.breadcrumb-segment.active {
+    color: var(--md-sys-color-primary);
+    font-weight: 600;
+    background: rgba(var(--md-sys-color-primary-rgb, 103, 80, 164), 0.1);
+}
+
+/* Light theme breadcrumb adjustments */
+body.theme-light .breadcrumb-bar {
+    background: var(--md-sys-color-surface-container);
+    border-bottom-color: var(--md-sys-color-outline-variant, #ddd);
+}
+body.theme-light .breadcrumb-segment.active {
+    background: rgba(103, 80, 164, 0.08);
+}
