@@ -4208,6 +4208,42 @@ function setupHelpPageEvents() {
     if (btnClose) btnClose.onclick = () => closeHelpPage();
     if (wrapBtn) wrapBtn.onclick = () => toggleHelpWordWrap();
 
+    // Zoom In / Out — adjusts font size of editor and view areas
+    let helpFontSize = 13; // Default font size in px
+    const MIN_FONT = 9;
+    const MAX_FONT = 24;
+    const ZOOM_STEP = 2;
+
+    const applyHelpZoom = () => {
+        if (viewArea) viewArea.style.fontSize = `${helpFontSize}px`;
+        if (editArea) editArea.style.fontSize = `${helpFontSize}px`;
+        if (lineNums) lineNums.style.fontSize = `${helpFontSize}px`;
+    };
+
+    const btnZoomIn = document.getElementById('help-zoom-in');
+    const btnZoomOut = document.getElementById('help-zoom-out');
+
+    if (btnZoomIn) btnZoomIn.onclick = () => {
+        if (helpFontSize < MAX_FONT) { helpFontSize += ZOOM_STEP; applyHelpZoom(); }
+    };
+    if (btnZoomOut) btnZoomOut.onclick = () => {
+        if (helpFontSize > MIN_FONT) { helpFontSize -= ZOOM_STEP; applyHelpZoom(); }
+    };
+
+    // Copy All — copies the full help page content to clipboard
+    const btnCopyAll = document.getElementById('help-copy-all');
+    if (btnCopyAll) btnCopyAll.onclick = () => {
+        if (!helpPageState) return;
+        const node = findNode(treeData, helpPageState.nodeId);
+        const content = node && node.helpContent ? node.helpContent : '';
+        if (!content) { showToast('📋 No content to copy'); return; }
+        navigator.clipboard.writeText(content).then(() => {
+            showToast('📋 Help page copied to clipboard');
+            btnCopyAll.textContent = '✅ Copied';
+            setTimeout(() => { btnCopyAll.textContent = '📋 Copy'; }, 1500);
+        });
+    };
+
     if (langSel) langSel.onchange = () => {
         if (!helpPageState) return;
         const node = findNode(treeData, helpPageState.nodeId);
