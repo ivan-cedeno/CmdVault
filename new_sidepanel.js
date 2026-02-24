@@ -1971,6 +1971,7 @@ function setupAppEvents() {
             else if (id === 'ctx-duplicate') { execDuplicate(contextTargetId); close(); }
             else if (id === 'ctx-add-folder') { execAdd(contextTargetId, 'folder'); close(); }
             else if (id === 'ctx-add-cmd') { execAdd(contextTargetId, 'command'); close(); }
+            else if (id === 'ctx-add-chain') { execAddChain(contextTargetId); close(); }
             else if (target.classList.contains('icon-option')) {
                 const newIcon = target.dataset.icon;
                 const node = findNode(treeData, contextTargetId);
@@ -2574,6 +2575,30 @@ function execAdd(parentId, type) {
     refreshAll();
 
     // Find the newly rendered DOM element and open the editor
+    const domElement = findNodeDomElement(newId);
+    if (!domElement) return;
+
+    openInlineEditor(domElement, tempNode, 'add', parentId);
+}
+
+/**
+ * Creates a new chain command inside a folder and opens the chain editor.
+ * Equivalent to execAdd() but pre-configured with ⛓️ icon and chain data.
+ */
+function execAddChain(parentId) {
+    cancelInlineEdit();
+
+    const newId = genId();
+    const tempNode = {
+        id: newId, name: '', description: '', cmd: '', tags: [],
+        type: 'command', icon: '⛓️', expanded: false,
+        chain: { connector: '&&', steps: [''] }
+    };
+
+    addItemToTreeSilent(parentId, tempNode);
+    inlineEditState = null;
+    refreshAll();
+
     const domElement = findNodeDomElement(newId);
     if (!domElement) return;
 
