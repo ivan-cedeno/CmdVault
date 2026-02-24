@@ -1474,6 +1474,53 @@ body.theme-nord .sh-number   { color: #B48EAD; }
 #search-input::placeholder {
     color: var(--md-sys-color-on-surface-variant, rgba(255, 255, 255, 0.25));
     font-weight: 300;
+    font-size: 11px;
+}
+
+/* Search Result Counter */
+.search-result-count {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--md-sys-color-primary-container, rgba(66, 135, 245, 0.15));
+    color: var(--md-sys-color-primary, #4287f5);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 18px;
+    text-align: center;
+}
+.search-result-count.hidden { display: none; }
+
+/* Search Clear Button */
+.btn-search-clear {
+    background: none;
+    border: none;
+    color: var(--md-sys-color-on-surface-variant, rgba(255,255,255,0.4));
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 50%;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+.btn-search-clear:hover {
+    color: var(--md-sys-color-on-surface, #fff);
+    background: rgba(255, 255, 255, 0.1);
+}
+.btn-search-clear.hidden { display: none; }
+
+/* Light mode overrides */
+.theme-light .search-result-count {
+    background: rgba(66, 135, 245, 0.1);
+}
+.theme-light .btn-search-clear {
+    color: rgba(0, 0, 0, 0.3);
+}
+.theme-light .btn-search-clear:hover {
+    color: #1e293b;
+    background: rgba(0, 0, 0, 0.06);
 }
 
 /* --- PULIDO FINAL V3: HIGHLIGHT & FOCUS --- */
@@ -2642,4 +2689,43 @@ body.theme-nord .sh-number   { color: #B48EAD; }
 .theme-light .version-picker-item:hover {
     background: var(--md-sys-color-primary);
     color: #fff;
+}
+
+/* ===== MASKED COMMAND (🔑 icon) ===== */
+
+.cmd-masked {
+    color: var(--md-sys-color-on-surface-variant, #999) !important;
+    letter-spacing: 2px;
+    cursor: pointer;
+    user-select: none;
+    font-style: italic;
+    opacity: 0.6;
+}
+
+.cmd-masked:hover {
+    opacity: 0.9;
+    color: var(--md-sys-color-primary) !important;
+}
+
+.cmd-masked::after {
+    content: '  👁 click to reveal';
+    font-size: 9px;
+    letter-spacing: 0;
+    opacity: 0;
+    font-style: normal;
+    color: var(--md-sys-color-primary);
+    transition: opacity 0.2s ease;
+}
+
+.cmd-masked:hover::after {
+    opacity: 0.7;
+}
+
+.cmd-revealed {
+    animation: revealFlash 0.3s ease;
+}
+
+@keyframes revealFlash {
+    0% { opacity: 0; transform: translateY(-2px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
