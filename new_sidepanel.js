@@ -715,6 +715,10 @@ function handleBreadcrumbScroll() {
     const refLine = scrollRect.top + 80; // reference line slightly below top (accounts for top-bar + breadcrumb)
 
     for (const item of folderItems) {
+        // Skip folders inside collapsed parents (they have zero height and misleading positions)
+        if (item.closest('.folder-content.collapsed')) continue;
+        if (item.offsetHeight === 0) continue;
+
         const rect = item.getBoundingClientRect();
         // Folder is considered "current" if its top edge is at or above the reference line
         if (rect.top <= refLine) {
