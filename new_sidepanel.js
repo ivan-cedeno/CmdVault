@@ -1306,11 +1306,29 @@ function setupAppEvents() {
     // --- Update Checker buttons ---
     bindClick('btn-check-update', () => checkForUpdates(true));
     bindClick('btn-download-update', () => {
-        // Open download URL from cached result
-        chrome.storage.local.get(['cachedUpdateResult'], (items) => {
+        // Download ZIP with custom filename (CmdVault-v{version}.zip)
+        chrome.storage.local.get(['cachedUpdateResult'], async (items) => {
             const remote = items.cachedUpdateResult;
             if (remote && remote.download_url) {
-                window.open(remote.download_url, '_blank');
+                try {
+                    showToast('⬇️ Downloading...');
+                    const resp = await fetch(remote.download_url);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `CmdVault-v${remote.version}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('✅ Download complete');
+                } catch (err) {
+                    console.warn('Download failed:', err.message);
+                    // Fallback: open URL directly
+                    window.open(remote.download_url, '_blank');
+                }
             } else {
                 showToast('⚠️ No download URL available');
             }
