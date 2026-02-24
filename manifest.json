@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CdmVault—Auto-Update",
+  "name": "CdmVault",
   "version": "3.0.2",
   "description": "Extension to store and manage sys-admin commands",
   "permissions": [
