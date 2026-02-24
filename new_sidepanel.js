@@ -140,16 +140,21 @@ function showCmdTooltip(headerEl, node) {
     if (hasCmd) {
         const cmdEl = document.createElement('div');
         cmdEl.className = 'cmd-tooltip-cmd';
-        // Truncate: show first line only if multiline, cap at 120 chars
-        let preview = node.cmd.trim();
-        const firstNewline = preview.indexOf('\n');
-        if (firstNewline > 0) {
-            preview = preview.substring(0, firstNewline) + ' …(multiline)';
+        // 🔑 Masked: don't reveal command in tooltip
+        if (node.icon === '🔑') {
+            cmdEl.textContent = '🔑 ••••••••••••';
+        } else {
+            // Truncate: show first line only if multiline, cap at 120 chars
+            let preview = node.cmd.trim();
+            const firstNewline = preview.indexOf('\n');
+            if (firstNewline > 0) {
+                preview = preview.substring(0, firstNewline) + ' …(multiline)';
+            }
+            if (preview.length > 120) {
+                preview = preview.substring(0, 117) + '…';
+            }
+            cmdEl.textContent = '$ ' + preview;
         }
-        if (preview.length > 120) {
-            preview = preview.substring(0, 117) + '…';
-        }
-        cmdEl.textContent = '$ ' + preview;
         tip.appendChild(cmdEl);
     }
 
@@ -928,8 +933,46 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         wrap.className = 'cmd-wrapper copy-flash';
         const pre = document.createElement('pre');
         pre.className = node.expanded ? 'cmd-preview expanded' : 'cmd-preview';
-        pre.innerHTML = highlightSyntax(String(node.cmd || ""));
-        pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap);
+
+        // 🔑 Masked mode: hide command text behind dots when icon is key
+        const isMasked = node.icon === '🔑';
+        if (isMasked) {
+            pre.textContent = '••••••••••••';
+            pre.classList.add('cmd-masked');
+            pre.dataset.revealed = 'false';
+
+            // Toggle reveal on click
+            pre.onclick = (e) => {
+                if (pre.dataset.revealed === 'false') {
+                    // Reveal the command
+                    pre.innerHTML = highlightSyntax(String(node.cmd || ""));
+                    pre.dataset.revealed = 'true';
+                    pre.classList.remove('cmd-masked');
+                    pre.classList.add('cmd-revealed');
+                } else {
+                    // Copy on second click (when revealed)
+                    copyToClipboard(node.cmd, node.name, wrap);
+                }
+            };
+
+            // Auto-hide after 5 seconds
+            let hideTimer = null;
+            const autoHide = () => {
+                clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => {
+                    if (pre.dataset.revealed === 'true') {
+                        pre.textContent = '••••••••••••';
+                        pre.dataset.revealed = 'false';
+                        pre.classList.add('cmd-masked');
+                        pre.classList.remove('cmd-revealed');
+                    }
+                }, 5000);
+            };
+            pre.addEventListener('click', autoHide);
+        } else {
+            pre.innerHTML = highlightSyntax(String(node.cmd || ""));
+            pre.onclick = () => copyToClipboard(node.cmd, node.name, wrap);
+        }
 
         // URL Detection: Add "Open URL" button if URLs are found
         const urlInfo = detectUrls(node.cmd);
