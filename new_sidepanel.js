@@ -3436,6 +3436,10 @@ function cancelInlineEdit() {
     } else if (mode === 'edit' && originalNode) {
         const node = findNode(treeData, id);
         if (node) {
+            // Remove all keys first so properties added temporarily (e.g. 'chain') are cleaned up
+            for (const key of Object.keys(node)) {
+                if (key !== 'id') delete node[key];
+            }
             Object.assign(node, originalNode);
         }
     }
