@@ -3050,3 +3050,101 @@ body.theme-light .chain-preview {
 body.theme-light .chain-step-delete:hover:not(:disabled) {
     background: rgba(239, 68, 68, 0.1);
 }
+
+/* ==========================================================================
+   CLIPBOARD AUTO-CLEAR — Warning banner + countdown
+   ========================================================================== */
+
+.clipboard-banner {
+    margin-bottom: 8px;
+    background: var(--md-sys-color-surface-container, rgba(255, 165, 0, 0.1));
+    border: 1px solid var(--md-sys-color-primary, #ffa500);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(255, 165, 0, 0.15);
+    animation: clipboardBannerSlideIn 0.3s ease-out;
+}
+
+.clipboard-banner.hidden {
+    display: none;
+}
+
+@keyframes clipboardBannerSlideIn {
+    0% { opacity: 0; transform: translateY(-8px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.clipboard-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    gap: 10px;
+}
+
+.clipboard-banner-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#clipboard-banner-cmd {
+    color: var(--md-sys-color-primary, #ffa500);
+    font-weight: 600;
+    max-width: 150px;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.clipboard-banner-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.clipboard-banner-btn {
+    padding: 4px 10px;
+    border: none;
+    background: var(--md-sys-color-primary, #ffa500);
+    color: var(--md-sys-color-on-primary, #000);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.clipboard-banner-btn:hover {
+    opacity: 0.85;
+    box-shadow: 0 2px 4px rgba(255, 165, 0, 0.3);
+}
+
+.clipboard-banner-btn:active {
+    transform: scale(0.98);
+}
+
+.clipboard-countdown-bar {
+    height: 2px;
+    background: var(--md-sys-color-primary, #ffa500);
+    width: 100%;
+    animation: clipboardCountdown linear;
+    animation-duration: var(--clipboard-timeout, 60s);
+}
+
+@keyframes clipboardCountdown {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Light theme override */
+body.theme-light .clipboard-banner {
+    background: rgba(255, 152, 0, 0.08);
+    border-color: #ff9800;
+}
