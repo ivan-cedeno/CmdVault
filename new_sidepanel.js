@@ -1976,31 +1976,21 @@ function setupAppEvents() {
                 const newIcon = target.dataset.icon;
                 const node = findNode(treeData, contextTargetId);
                 if (node) {
-                    const wasChain = !!node.chain;
-                    const updates = { icon: newIcon };
-
-                    // Converting TO chain mode: initialize chain from existing cmd
+                    // Converting TO chain: don't persist yet — open editor and let Save/Cancel handle it
                     if (newIcon === '⛓️' && !node.chain) {
-                        const existingCmd = (node.cmd || '').trim();
-                        updates.chain = {
-                            connector: '&&',
-                            steps: existingCmd ? [existingCmd] : ['']
-                        };
+                        close();
+                        // Use execEditAsChain which sets up chain temporarily
+                        setTimeout(() => execEditAsChain(contextTargetId), 100);
+                        return;
                     }
 
-                    updateItem(contextTargetId, updates);
+                    const wasChain = !!node.chain;
+                    updateItem(contextTargetId, { icon: newIcon });
 
                     // Converting FROM chain mode: keep concatenated cmd, remove chain
                     if (newIcon !== '⛓️' && wasChain) {
                         delete node.chain;
                         saveData();
-                    }
-
-                    // Auto-open chain editor when switching TO chain mode
-                    if (newIcon === '⛓️') {
-                        close();
-                        setTimeout(() => execEdit(contextTargetId), 100);
-                        return;
                     }
                 }
                 close();
@@ -2616,6 +2606,57 @@ function execEdit(id) {
     if (!domElement) return;
 
     openInlineEditor(domElement, node, 'edit', null);
+}
+
+/**
+ * Opens the inline editor with chain mode applied TEMPORARILY.
+ * The original node state is snapshot'd BEFORE applying chain fields,
+ * so Cancel fully reverts the command to its original non-chain state.
+ */
+function execEditAsChain(id) {
+    const node = findNode(treeData, id);
+    if (!node) return;
+
+    cancelInlineEdit();
+
+    // Snapshot BEFORE modifying → cancel will restore this clean state
+    const originalSnapshot = JSON.parse(JSON.stringify(node));
+
+    // Apply chain fields temporarily (not saved to storage yet)
+    const existingCmd = (node.cmd || '').trim();
+    node.icon = '⛓️';
+    node.chain = { connector: '&&', steps: existingCmd ? [existingCmd] : [''] };
+
+    // Re-render so the DOM reflects the new icon/chain state
+    refreshAll();
+
+    const domElement = findNodeDomElement(id);
+    if (!domElement) return;
+
+    // Open editor — override the originalNode with our pre-chain snapshot
+    const form = buildInlineForm(node);
+    inlineEditState = {
+        id: node.id,
+        mode: 'edit',
+        type: node.type,
+        parentId: null,
+        originalNode: originalSnapshot, // ← restores original non-chain state on Cancel
+        formElement: form
+    };
+
+    const treeItemRow = domElement.querySelector('.tree-item') || domElement;
+    const header = treeItemRow.querySelector('.item-header');
+    const cmdWrapper = treeItemRow.querySelector('.cmd-wrapper');
+    if (header) header.style.display = 'none';
+    if (cmdWrapper) cmdWrapper.style.display = 'none';
+
+    treeItemRow.insertBefore(form, treeItemRow.firstChild);
+    treeItemRow.classList.add('inline-editing');
+    treeItemRow.draggable = false;
+
+    const firstInput = form.querySelector('input, textarea');
+    if (firstInput) { firstInput.focus(); firstInput.select(); }
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // --- NEW RECURSIVE ACTIONS ---
