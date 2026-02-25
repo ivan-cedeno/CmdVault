@@ -296,7 +296,7 @@ function detectUrls(text) {
 
 // --- AUTO-UPDATE CHECKER ---
 const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/ivan-cedeno/CmdVault/main/version.json';
-const UPDATE_CHECK_INTERVAL = 48 * 60 * 60 * 1000; // 48 hours in ms
+const UPDATE_CHECK_INTERVAL = 14 * 24 * 60 * 60 * 1000; // 14 days in ms
 
 /**
  * Compares two semver strings (e.g. "1.0.0" vs "1.1.0").
@@ -375,7 +375,7 @@ function showUpdateBadge(show) {
 
 /**
  * Fetches version.json from GitHub and compares with the local manifest version.
- * Respects the 48-hour check interval unless force=true.
+ * Respects the 14-day check interval unless force=true.
  * @param {boolean} [force=false] - Skip the interval check (for manual "Check Now" clicks).
  */
 async function checkForUpdates(force = false) {
@@ -472,13 +472,45 @@ document.addEventListener('DOMContentLoaded', () => {
         clipboardToggle.addEventListener('change', (e) => {
             clipboardAutoClearEnabled = e.target.checked;
             chrome.storage.local.set({ clipboardAutoClearEnabled });
+
+            // If disabling, cancel any running timer and hide banner
+            if (!clipboardAutoClearEnabled) {
+                clearTimeout(clipboardClearTimer);
+                clearInterval(window.clipboardBannerInterval);
+                const banner = document.getElementById('clipboard-banner');
+                if (banner) banner.classList.add('hidden');
+            }
         });
     }
     if (clipboardTimeout) {
         clipboardTimeout.value = clipboardAutoClearTimeout;
+
+        // Validate on input event (real-time feedback while typing)
+        clipboardTimeout.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            // If invalid or empty, don't validate yet (let user finish typing)
+            if (isNaN(val)) return;
+
+            // Enforce bounds immediately
+            if (val < 10) {
+                e.target.value = 10;
+            } else if (val > 300) {
+                e.target.value = 300;
+            }
+        });
+
+        // Save on change event (when user leaves the field or presses Enter)
         clipboardTimeout.addEventListener('change', (e) => {
-            const val = parseInt(e.target.value) || 60;
-            clipboardAutoClearTimeout = Math.max(10, Math.min(300, val)); // Enforce 10-300s
+            let val = parseInt(e.target.value);
+
+            // Validate: must be a number between 10-300
+            if (isNaN(val) || val < 10) {
+                val = 10;
+            } else if (val > 300) {
+                val = 300;
+            }
+
+            clipboardAutoClearTimeout = val;
             clipboardTimeout.value = clipboardAutoClearTimeout;
             chrome.storage.local.set({ clipboardAutoClearTimeout });
         });
@@ -543,7 +575,7 @@ function loadDataFromStorage() {
         isDataLoaded = true;
         staggerAnimationEnabled = true; // Enable stagger animation for initial load
 
-        // Trigger auto-update check (non-blocking, respects 48h interval)
+        // Trigger auto-update check (non-blocking, respects 14-day interval)
         checkForUpdates(false);
 
         refreshAll();
@@ -1605,14 +1637,6 @@ function setupAppEvents() {
             }
         });
     }
-
-    bindClick('overflow-clear-clipboard', () => {
-        navigator.clipboard.writeText('');
-        appClipboard = null;
-        refreshAll();
-        if (overflowMenu) overflowMenu.classList.add('hidden');
-        showToast("🧹 Clipboard Cleared");
-    });
 
     const sOverlay = document.getElementById('settings-overlay');
     bindClick('overflow-settings', () => {
@@ -4398,40 +4422,39 @@ document.addEventListener('DOMContentLoaded', () => {
  * Shows/updates the clipboard warning banner and sets up auto-clear timer.
  */
 function showClipboardBanner(commandName, text) {
+    // Only show banner if auto-clear feature is enabled
+    if (!clipboardAutoClearEnabled) return;
+
     const banner = document.getElementById('clipboard-banner');
     if (!banner) return;
 
     lastClipboardContent = text;
     clipboardCopyTime = Date.now();
 
-    // Update banner text
-    const cmdEl = document.getElementById('clipboard-banner-cmd');
+    // Update banner time
     const timeEl = document.getElementById('clipboard-banner-time');
-    if (cmdEl) cmdEl.textContent = commandName.substring(0, 40) + (commandName.length > 40 ? '...' : '');
     if (timeEl) timeEl.textContent = '0s';
 
     // Show banner
     banner.classList.remove('hidden');
 
-    // Set up countdown update
+    // Set up countdown update (shows elapsed time)
     clearInterval(window.clipboardBannerInterval);
     window.clipboardBannerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - clipboardCopyTime) / 1000);
         if (timeEl) timeEl.textContent = `${elapsed}s`;
     }, 1000);
 
-    // Set up auto-clear if enabled
-    if (clipboardAutoClearEnabled) {
-        clearTimeout(clipboardClearTimer);
-        clipboardClearTimer = setTimeout(() => {
-            clearClipboard();
-        }, clipboardAutoClearTimeout * 1000);
+    // Set up auto-clear timer
+    clearTimeout(clipboardClearTimer);
+    clipboardClearTimer = setTimeout(() => {
+        clearClipboard();
+    }, clipboardAutoClearTimeout * 1000);
 
-        // Set animation duration for countdown bar
-        const countdownBar = document.getElementById('clipboard-countdown-bar');
-        if (countdownBar) {
-            countdownBar.style.setProperty('--clipboard-timeout', `${clipboardAutoClearTimeout}s`);
-        }
+    // Set animation duration for countdown bar
+    const countdownBar = document.getElementById('clipboard-countdown-bar');
+    if (countdownBar) {
+        countdownBar.style.setProperty('--clipboard-timeout', `${clipboardAutoClearTimeout}s`);
     }
 }
 
