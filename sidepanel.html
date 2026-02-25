@@ -90,6 +90,20 @@
     </div>
 
     <div class="main-content" role="main">
+        <!-- Clipboard Warning Banner -->
+        <div id="clipboard-banner" class="clipboard-banner hidden" role="alert" aria-live="polite">
+            <div class="clipboard-banner-content">
+                <span class="clipboard-banner-text">📋 <strong id="clipboard-banner-cmd">Command</strong> copied (<span id="clipboard-banner-time">0s</span> ago)</span>
+                <div class="clipboard-banner-actions">
+                    <button id="btn-clipboard-clear" class="clipboard-banner-btn" title="Clear clipboard now">Clear</button>
+                    <button id="btn-clipboard-dismiss" class="clipboard-banner-btn" title="Dismiss banner">✕</button>
+                </div>
+            </div>
+            <div class="clipboard-banner-countdown">
+                <div id="clipboard-countdown-bar" class="clipboard-countdown-bar"></div>
+            </div>
+        </div>
+
         <div id="quick-access-container" class="section-container hidden">
             <div id="qa-header" class="section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="qa-list">
                 <span class="section-label">⭐ Favorites</span>
@@ -244,6 +258,21 @@
             <div class="sync-actions" style="margin-bottom: 25px; display: flex; gap: 10px;">
                 <button id="btn-sync-upload" class="btn-gh upload" disabled style="flex:1;">⬆️ Push</button>
                 <button id="btn-sync-download" class="btn-gh download" disabled style="flex:1;">⬇️ Fetch</button>
+            </div>
+
+            <h3
+                style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--md-sys-color-primary); border-bottom: 2px solid var(--md-sys-color-surface-container-high); padding-bottom: 5px;">
+                Security
+            </h3>
+            <div style="margin-bottom: 25px;">
+                <label style="display:block; margin-bottom: 12px; font-size: 0.9em;">Clipboard Auto-Clear</label>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <input type="checkbox" id="clipboard-autoclear-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+                    <label for="clipboard-autoclear-toggle" style="cursor: pointer; margin: 0;">Enable auto-clear after</label>
+                    <input type="number" id="clipboard-autoclear-timeout" min="10" max="300" value="60" style="width: 50px; padding: 4px 6px;">
+                    <span style="font-size: 0.85em; opacity: 0.7;">seconds</span>
+                </div>
+                <p style="font-size: 0.8em; opacity: 0.6; margin: 8px 0; line-height: 1.4;">Automatically clears the clipboard after the specified time to prevent accidental pasting of sensitive commands.</p>
             </div>
 
             <h3

@@ -110,6 +110,13 @@ let selectedNodeIds = new Set(); // Multi-select: all currently selected node ID
 let selectionAnchorId = null; // Shift+Click range anchor
 let staggerAnimationEnabled = false; // Controls stagger entry animation (only on initial load)
 
+// --- CLIPBOARD AUTO-CLEAR ---
+let clipboardAutoClearEnabled = false;    // User preference: auto-clear after N seconds
+let clipboardAutoClearTimeout = 60;       // Seconds before clipboard is cleared
+let clipboardClearTimer = null;           // Timeout ID for auto-clear
+let lastClipboardContent = null;          // Track what's currently in clipboard
+let clipboardCopyTime = null;             // Timestamp when command was copied
+
 // --- COMMAND TOOLTIP ---
 let activeTooltip = null;   // Currently visible tooltip DOM element
 let tooltipTimer = null;    // Delay timer before showing tooltip
@@ -444,6 +451,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide tooltip on scroll to prevent detached floating tooltip
     const mainContent = document.querySelector('.main-content');
     if (mainContent) mainContent.addEventListener('scroll', hideCmdTooltip, { passive: true });
+
+    // Clipboard banner event listeners
+    const clearBtn = document.getElementById('btn-clipboard-clear');
+    const dismissBtn = document.getElementById('btn-clipboard-dismiss');
+    const clipboardToggle = document.getElementById('clipboard-autoclear-toggle');
+    const clipboardTimeout = document.getElementById('clipboard-autoclear-timeout');
+
+    if (clearBtn) clearBtn.addEventListener('click', clearClipboard);
+    if (dismissBtn) dismissBtn.addEventListener('click', () => {
+        const banner = document.getElementById('clipboard-banner');
+        if (banner) banner.classList.add('hidden');
+        clearTimeout(clipboardClearTimer);
+        clearInterval(window.clipboardBannerInterval);
+    });
+
+    // Load and update clipboard settings UI
+    if (clipboardToggle) {
+        clipboardToggle.checked = clipboardAutoClearEnabled;
+        clipboardToggle.addEventListener('change', (e) => {
+            clipboardAutoClearEnabled = e.target.checked;
+            chrome.storage.local.set({ clipboardAutoClearEnabled });
+        });
+    }
+    if (clipboardTimeout) {
+        clipboardTimeout.value = clipboardAutoClearTimeout;
+        clipboardTimeout.addEventListener('change', (e) => {
+            const val = parseInt(e.target.value) || 60;
+            clipboardAutoClearTimeout = Math.max(10, Math.min(300, val)); // Enforce 10-300s
+            clipboardTimeout.value = clipboardAutoClearTimeout;
+            chrome.storage.local.set({ clipboardAutoClearTimeout });
+        });
+    }
 });
 
 // --- CARGA DE DATOS ---
@@ -483,6 +522,10 @@ function loadDataFromStorage() {
         qaCollapsed = items.qaCollapsed || false;
         historyCollapsed = items.historyCollapsed || false;
         commandsCollapsed = items.commandsCollapsed || false;
+
+        // Load clipboard auto-clear settings
+        clipboardAutoClearEnabled = items.clipboardAutoClearEnabled || false;
+        clipboardAutoClearTimeout = items.clipboardAutoClearTimeout || 60;
 
         ghToken = items.ghToken || "";
 
@@ -4352,6 +4395,64 @@ document.addEventListener('DOMContentLoaded', () => {
  * 2. FUNCIÓN DE ENTRADA (Llama a esto desde tus botones de comando)
  */
 /**
+ * Shows/updates the clipboard warning banner and sets up auto-clear timer.
+ */
+function showClipboardBanner(commandName, text) {
+    const banner = document.getElementById('clipboard-banner');
+    if (!banner) return;
+
+    lastClipboardContent = text;
+    clipboardCopyTime = Date.now();
+
+    // Update banner text
+    const cmdEl = document.getElementById('clipboard-banner-cmd');
+    const timeEl = document.getElementById('clipboard-banner-time');
+    if (cmdEl) cmdEl.textContent = commandName.substring(0, 40) + (commandName.length > 40 ? '...' : '');
+    if (timeEl) timeEl.textContent = '0s';
+
+    // Show banner
+    banner.classList.remove('hidden');
+
+    // Set up countdown update
+    clearInterval(window.clipboardBannerInterval);
+    window.clipboardBannerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - clipboardCopyTime) / 1000);
+        if (timeEl) timeEl.textContent = `${elapsed}s`;
+    }, 1000);
+
+    // Set up auto-clear if enabled
+    if (clipboardAutoClearEnabled) {
+        clearTimeout(clipboardClearTimer);
+        clipboardClearTimer = setTimeout(() => {
+            clearClipboard();
+        }, clipboardAutoClearTimeout * 1000);
+
+        // Set animation duration for countdown bar
+        const countdownBar = document.getElementById('clipboard-countdown-bar');
+        if (countdownBar) {
+            countdownBar.style.setProperty('--clipboard-timeout', `${clipboardAutoClearTimeout}s`);
+        }
+    }
+}
+
+/**
+ * Clears the clipboard and hides the banner.
+ */
+function clearClipboard() {
+    navigator.clipboard.writeText('').catch(() => {
+        // Silently fail if permission denied
+    });
+
+    const banner = document.getElementById('clipboard-banner');
+    if (banner) {
+        banner.classList.add('hidden');
+    }
+
+    clearTimeout(clipboardClearTimer);
+    clearInterval(window.clipboardBannerInterval);
+}
+
+/**
  * Versión Consolidada V4.0: Feedback Visual + Historial Compatible V1.
  */
 function copyToClipboard(text, name = "Command", element = null) {
@@ -4403,7 +4504,10 @@ function copyToClipboard(text, name = "Command", element = null) {
         });
     }
 
-    // 3. COPIADO REAL AL PORTAPAPELES
+    // 3. CLIPBOARD AUTO-CLEAR BANNER
+    showClipboardBanner(name, text);
+
+    // 4. COPIADO REAL AL PORTAPAPELES
     const hasVariables = /{{(.*?)}}/.test(text);
     if (hasVariables && typeof openSmartModal === 'function') {
         openSmartModal(text);
