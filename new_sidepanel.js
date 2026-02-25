@@ -110,6 +110,9 @@ let selectedNodeIds = new Set(); // Multi-select: all currently selected node ID
 let selectionAnchorId = null; // Shift+Click range anchor
 let staggerAnimationEnabled = false; // Controls stagger entry animation (only on initial load)
 
+// --- SYNC CONFLICT RESOLUTION ---
+let lastSyncHashCache = null;         // Cached hash of treeData at last successful sync
+
 // --- CLIPBOARD AUTO-CLEAR ---
 let clipboardAutoClearEnabled = false;    // User preference: auto-clear after N seconds
 let clipboardAutoClearTimeout = 60;       // Seconds before clipboard is cleared
@@ -558,6 +561,9 @@ function loadDataFromStorage() {
         // Load clipboard auto-clear settings
         clipboardAutoClearEnabled = items.clipboardAutoClearEnabled || false;
         clipboardAutoClearTimeout = items.clipboardAutoClearTimeout || 60;
+
+        // Load sync conflict hash
+        lastSyncHashCache = items.lastSyncHash || null;
 
         ghToken = items.ghToken || "";
 
@@ -4090,88 +4096,323 @@ function updateSettingsUI() {
 
 // --- GITHUB SYNC ENGINE (MIGRADO DE V1) ---
 
-function updateSyncIcon(state) {
-    const icon = document.getElementById('sync-indicator');
-    if (!icon) return; // Protección por si el elemento no existe en el HTML V2
-    if (state === 'working') {
-        icon.classList.add('sync-working');
-        icon.classList.remove('sync-success');
-    } else if (state === 'success') {
-        icon.classList.remove('sync-working');
-        icon.classList.add('sync-success');
-        setTimeout(() => icon.classList.remove('sync-success'), 3000);
+// --- SYNC CONFLICT RESOLUTION FUNCTIONS ---
+
+/**
+ * Computes a deterministic hash string for treeData.
+ * Strips UI-only fields (collapsed, expanded) so toggling folders
+ * doesn't trigger false conflicts. Uses cyrb53 fast hash.
+ */
+function computeTreeHash(data) {
+    function canonicalize(nodes) {
+        if (!Array.isArray(nodes)) return [];
+        return nodes.map(n => {
+            const clean = {};
+            Object.keys(n).sort().forEach(k => {
+                if (k === 'collapsed' || k === 'expanded') return;
+                if (k === 'children' && Array.isArray(n.children)) {
+                    clean.children = canonicalize(n.children);
+                } else {
+                    clean[k] = n[k];
+                }
+            });
+            return clean;
+        });
     }
+    const canonical = JSON.stringify(canonicalize(data));
+    // cyrb53 hash
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < canonical.length; i++) {
+        const ch = canonical.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+    h1 ^= Math.imul(h2 ^ (h2 >>> 16), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+    h2 ^= Math.imul(h1 ^ (h1 >>> 16), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
-async function uploadToGist(isRetry = false) {
-    if (!ghToken) return showToast("❌ Save GitHub Token first");
+function saveLastSyncHash(hash) {
+    lastSyncHashCache = hash;
+    chrome.storage.local.set({ lastSyncHash: hash });
+}
 
-    if (!isRetry) showToast("☁️ Syncing with GitHub...");
+/**
+ * Fetches current cloud data and determines the sync state.
+ * Returns { status, cloudData, localHash, cloudHash, gistData }
+ * status: 'no_changes' | 'local_only' | 'cloud_only' | 'conflict'
+ */
+async function detectSyncConflict() {
+    const localHash = computeTreeHash(treeData);
 
-    // Build versioned filename with timestamp (e.g. backup_2026-02-23_15-30.json)
+    const gistId = localStorage.getItem('gistId');
+    if (!gistId) {
+        return { status: 'local_only', cloudData: null, localHash, cloudHash: null, gistData: null };
+    }
+
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+        headers: { 'Authorization': `Bearer ${ghToken}` }
+    });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            localStorage.removeItem('gistId');
+            return { status: 'local_only', cloudData: null, localHash, cloudHash: null, gistData: null };
+        }
+        throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const gistData = await response.json();
+    const file = gistData.files[GIST_FILENAME];
+    if (!file) {
+        return { status: 'local_only', cloudData: null, localHash, cloudHash: null, gistData };
+    }
+
+    let cloudData;
+    if (file.truncated) {
+        const raw = await fetch(file.raw_url);
+        cloudData = await raw.json();
+    } else {
+        cloudData = JSON.parse(file.content);
+    }
+
+    const cloudHash = computeTreeHash(cloudData);
+
+    // If both are identical, no conflict
+    if (localHash === cloudHash) {
+        return { status: 'no_changes', cloudData, localHash, cloudHash, gistData };
+    }
+
+    // Three-way comparison
+    if (!lastSyncHashCache) {
+        // First sync ever — show conflict modal to be safe
+        return { status: 'conflict', cloudData, localHash, cloudHash, gistData };
+    }
+
+    if (localHash === lastSyncHashCache && cloudHash !== lastSyncHashCache) {
+        return { status: 'cloud_only', cloudData, localHash, cloudHash, gistData };
+    }
+
+    if (cloudHash === lastSyncHashCache && localHash !== lastSyncHashCache) {
+        return { status: 'local_only', cloudData, localHash, cloudHash, gistData };
+    }
+
+    // Both differ from lastSyncHash
+    return { status: 'conflict', cloudData, localHash, cloudHash, gistData };
+}
+
+/**
+ * Recursively merges two treeData arrays by node.id.
+ * Local wins on property conflicts; children merged recursively.
+ */
+function smartMergeTree(localNodes, cloudNodes) {
+    const localMap = new Map();
+    (localNodes || []).forEach(n => { if (n && n.id) localMap.set(String(n.id), n); });
+
+    const cloudMap = new Map();
+    (cloudNodes || []).forEach(n => { if (n && n.id) cloudMap.set(String(n.id), n); });
+
+    const merged = [];
+    const processedIds = new Set();
+
+    // Pass 1: Walk local nodes in order (preserves local ordering)
+    for (const localNode of (localNodes || [])) {
+        if (!localNode || !localNode.id) continue;
+        const id = String(localNode.id);
+        processedIds.add(id);
+
+        const cloudNode = cloudMap.get(id);
+        if (cloudNode) {
+            const mergedNode = { ...localNode };
+            if (localNode.type === 'folder' && cloudNode.type === 'folder') {
+                mergedNode.children = smartMergeTree(
+                    localNode.children || [],
+                    cloudNode.children || []
+                );
+            }
+            if (!localNode.chain && cloudNode.chain) {
+                mergedNode.chain = JSON.parse(JSON.stringify(cloudNode.chain));
+            }
+            merged.push(mergedNode);
+        } else {
+            merged.push(localNode);
+        }
+    }
+
+    // Pass 2: Append cloud-only nodes
+    for (const cloudNode of (cloudNodes || [])) {
+        if (!cloudNode || !cloudNode.id) continue;
+        if (!processedIds.has(String(cloudNode.id))) {
+            merged.push(cloudNode);
+        }
+    }
+
+    return merged;
+}
+
+/**
+ * Shows conflict resolution modal. Returns a Promise resolving to
+ * 'use_cloud' | 'use_local' | 'smart_merge' | null (cancel).
+ */
+function showConflictModal(localData, cloudData) {
+    return new Promise(resolve => {
+        const overlay = document.getElementById('conflict-modal-overlay');
+        if (!overlay) return resolve(null);
+
+        // Populate stats
+        const localCount = document.getElementById('conflict-local-count');
+        const cloudCount = document.getElementById('conflict-cloud-count');
+        if (localCount) localCount.textContent = `${countCommands(localData)} cmds`;
+        if (cloudCount) cloudCount.textContent = `${countCommands(cloudData)} cmds`;
+
+        overlay.classList.remove('hidden');
+
+        function cleanup(result) {
+            overlay.classList.add('hidden');
+            overlay.removeEventListener('click', onOverlay);
+            document.removeEventListener('keydown', onEsc);
+            resolve(result);
+        }
+
+        function onOverlay(e) { if (e.target === overlay) cleanup(null); }
+        function onEsc(e) { if (e.key === 'Escape') cleanup(null); }
+
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onEsc);
+
+        document.getElementById('conflict-btn-use-cloud').onclick = () => cleanup('use_cloud');
+        document.getElementById('conflict-btn-use-local').onclick = () => cleanup('use_local');
+        document.getElementById('conflict-btn-smart-merge').onclick = () => cleanup('smart_merge');
+        document.getElementById('conflict-btn-cancel').onclick = () => cleanup(null);
+    });
+}
+
+/**
+ * Applies the chosen conflict resolution and syncs.
+ * @param {string} choice - 'use_cloud' | 'use_local' | 'smart_merge'
+ * @param {Array} cloudData - The cloud treeData
+ */
+async function resolveConflict(choice, cloudData) {
+    pushUndoState(`Sync: ${choice}`);
+
+    if (choice === 'use_cloud') {
+        treeData = cloudData;
+        chrome.storage.local.set({ linuxTree: treeData });
+        refreshAll();
+        showToast("☁️ Local replaced with cloud data");
+    } else if (choice === 'use_local') {
+        // Push local to cloud
+        showToast("💻 Pushing local data to cloud...");
+    } else if (choice === 'smart_merge') {
+        treeData = smartMergeTree(treeData, cloudData);
+        chrome.storage.local.set({ linuxTree: treeData });
+        refreshAll();
+        showToast("🔀 Smart merge complete");
+    }
+
+    // After resolution, push the resulting data to cloud and save hash
+    await pushToCloud();
+    saveLastSyncHash(computeTreeHash(treeData));
+    updateSyncIcon('success');
+}
+
+/**
+ * Internal: pushes current treeData to the existing gist (no conflict check).
+ */
+async function pushToCloud() {
+    const gistId = localStorage.getItem('gistId');
     const now = new Date();
     const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
     const versionedName = `backup_${ts}.json`;
     const content = JSON.stringify(treeData, null, 2);
 
-    // Files object: current backup + new versioned snapshot
     const files = {
         [GIST_FILENAME]: { content },
         [versionedName]: { content }
     };
 
-    let gistId = localStorage.getItem('gistId');
     let url = 'https://api.github.com/gists';
     let method = 'POST';
-
     if (gistId) {
         url = `https://api.github.com/gists/${gistId}`;
         method = 'PATCH';
     }
 
+    const response = await fetch(url, {
+        method,
+        headers: {
+            'Authorization': `Bearer ${ghToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({ description: "CmdVault Backup (Versioned)", public: false, files })
+    });
+
+    if (!response.ok) throw new Error(`Push failed: ${response.status}`);
+
+    const data = await response.json();
+    if (data.id) localStorage.setItem('gistId', data.id);
+    await pruneOldBackups(data);
+}
+
+// --- END CONFLICT RESOLUTION ---
+
+function updateSyncIcon(state) {
+    const icon = document.getElementById('sync-indicator');
+    if (!icon) return;
+    icon.classList.remove('sync-working', 'sync-success', 'sync-conflict');
+    if (state === 'working') {
+        icon.classList.add('sync-working');
+    } else if (state === 'success') {
+        icon.classList.add('sync-success');
+        setTimeout(() => icon.classList.remove('sync-success'), 3000);
+    } else if (state === 'conflict') {
+        icon.classList.add('sync-conflict');
+    }
+}
+
+async function uploadToGist(isRetry = false) {
+    if (!ghToken) return showToast("❌ Save GitHub Token first");
+    updateSyncIcon('working');
+
     try {
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${ghToken}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: JSON.stringify({
-                description: "CmdVault Backup (Versioned)",
-                public: false,
-                files
-            })
-        });
+        // Conflict detection
+        const result = await detectSyncConflict();
 
-        if (response.status === 403 || response.status === 429) {
-            throw new Error(`⏳ GitHub Rate Limit. Try later.`);
+        if (result.status === 'no_changes') {
+            showToast("✅ Already in sync");
+            updateSyncIcon('success');
+            return;
         }
 
-        if (response.status === 404 && gistId) {
-            if (isRetry) throw new Error("Check token permissions.");
-            console.warn("⚠️ Gist missing. Creating new...");
-            localStorage.removeItem('gistId');
-            return await uploadToGist(true);
+        if (result.status === 'cloud_only') {
+            showToast("☁️ Cloud has newer data. Fetch first or use Push to overwrite.");
+            // Still allow push — show conflict modal
+            const choice = await showConflictModal(treeData, result.cloudData);
+            if (!choice) { updateSyncIcon('success'); return; }
+            await resolveConflict(choice, result.cloudData);
+            return;
         }
 
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || `Error ${response.status}`);
+        if (result.status === 'conflict') {
+            const choice = await showConflictModal(treeData, result.cloudData);
+            if (!choice) { updateSyncIcon('success'); return; }
+            await resolveConflict(choice, result.cloudData);
+            return;
         }
 
-        const data = await response.json();
-        if (data.id) localStorage.setItem('gistId', data.id);
-
-        // Prune old versioned backups — keep only the last N
-        await pruneOldBackups(data);
-
+        // status === 'local_only' — safe to push directly
+        if (!isRetry) showToast("☁️ Syncing with GitHub...");
+        await pushToCloud();
+        saveLastSyncHash(computeTreeHash(treeData));
         showToast("✅ Backup uploaded");
         updateSyncIcon('success');
 
     } catch (e) {
         console.error("Gist Error:", e);
-        showToast(e.message.includes("Rate Limit") ? e.message : `❌ Error: ${e.message}`);
+        showToast(e.message.includes("Rate Limit") ? `⏳ GitHub Rate Limit. Try later.` : `❌ Error: ${e.message}`);
     }
 }
 
@@ -4211,61 +4452,80 @@ async function pruneOldBackups(gistData) {
 async function downloadFromGist() {
     cancelInlineEdit();
     if (!ghToken) return showToast("❌ Save GitHub Token first");
-    showToast("📥 Fetching backups...");
+    updateSyncIcon('working');
 
     try {
-        const responseGists = await fetch('https://api.github.com/gists', {
-            headers: { 'Authorization': `token ${ghToken}` }
-        });
-        const gists = await responseGists.json();
-        const remoteGist = gists.find(g => g.files && g.files[GIST_FILENAME]);
+        // Conflict detection
+        const result = await detectSyncConflict();
 
-        if (!remoteGist) return showToast("❓ No backup found");
+        if (result.status === 'no_changes') {
+            showToast("✅ Already in sync");
+            updateSyncIcon('success');
+            return;
+        }
 
-        // Save Gist ID for future syncs
-        localStorage.setItem('gistId', remoteGist.id);
+        if (result.status === 'local_only') {
+            showToast("💻 No cloud changes. Your local data is newer.");
+            updateSyncIcon('success');
+            return;
+        }
 
-        // Collect all available versions
-        const fileNames = Object.keys(remoteGist.files);
+        if (result.status === 'conflict') {
+            const choice = await showConflictModal(treeData, result.cloudData);
+            if (!choice) { updateSyncIcon('success'); return; }
+            await resolveConflict(choice, result.cloudData);
+            return;
+        }
+
+        // status === 'cloud_only' — safe to pull directly
+        // But still offer version picker if multiple versions exist
+        showToast("📥 Fetching backups...");
+        const gistId = localStorage.getItem('gistId');
+        if (!gistId || !result.gistData) {
+            // Fallback: direct restore from detected cloud data
+            pushUndoState('Cloud restore');
+            treeData = result.cloudData;
+            chrome.storage.local.set({ linuxTree: treeData }, () => refreshAll());
+            saveLastSyncHash(computeTreeHash(treeData));
+            showToast("✅ Restored from cloud");
+            updateSyncIcon('success');
+            return;
+        }
+
+        // Collect versioned files for picker
+        const gistData = result.gistData;
+        const fileNames = Object.keys(gistData.files || {});
         const versionedFiles = fileNames
             .filter(f => /^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/.test(f))
             .sort()
-            .reverse(); // Newest first
+            .reverse();
 
-        // Build version list: current + versioned snapshots
         const versions = [];
-
-        // Always add the main/current backup first
-        if (remoteGist.files[GIST_FILENAME]) {
+        if (gistData.files[GIST_FILENAME]) {
             versions.push({
                 label: '📌 Latest (current)',
                 filename: GIST_FILENAME,
-                raw_url: remoteGist.files[GIST_FILENAME].raw_url
+                raw_url: gistData.files[GIST_FILENAME].raw_url
             });
         }
 
-        // Add versioned snapshots
         versionedFiles.forEach(f => {
-            // Parse timestamp from filename: backup_2026-02-23_15-30.json
             const match = f.match(/backup_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})\.json/);
             if (match) {
                 const [, y, mo, d, h, mi] = match;
-                const dateStr = `${y}-${mo}-${d} ${h}:${mi}`;
                 versions.push({
-                    label: `🕒 ${dateStr}`,
+                    label: `🕒 ${y}-${mo}-${d} ${h}:${mi}`,
                     filename: f,
-                    raw_url: remoteGist.files[f].raw_url
+                    raw_url: gistData.files[f].raw_url
                 });
             }
         });
 
-        // If only 1 version, restore directly without picker
         if (versions.length <= 1) {
             await restoreFromGistFile(versions[0].raw_url, versions[0].label);
             return;
         }
 
-        // Show version picker modal
         showVersionPicker(versions);
 
     } catch (e) {
@@ -4286,11 +4546,14 @@ async function restoreFromGistFile(rawUrl, label) {
         const data = await rawData.json();
 
         if (data) {
+            pushUndoState(`Restore: ${label}`);
             treeData = data;
             chrome.storage.local.set({ linuxTree: treeData }, () => {
                 refreshAll();
             });
+            saveLastSyncHash(computeTreeHash(treeData));
             showToast(`✅ Restored: ${label}`);
+            updateSyncIcon('success');
         }
     } catch (e) {
         console.error(e);
@@ -4363,24 +4626,64 @@ function showVersionPicker(versions) {
 
 async function autoSyncToCloud() {
     if (!ghToken) return;
+    const gistId = localStorage.getItem('gistId');
+    if (!gistId) return;
+
     updateSyncIcon('working');
     try {
-        // Lógica simplificada para auto-guardado: solo actualiza si ya existe un ID conocido
-        // para evitar crear Gists infinitos accidentalmente.
-        let gistId = localStorage.getItem('gistId');
-        if (!gistId) return;
+        const localHash = computeTreeHash(treeData);
 
+        // If no change since last sync, skip
+        if (localHash === lastSyncHashCache) {
+            updateSyncIcon('success');
+            return;
+        }
+
+        // Fetch cloud to check for conflicts before auto-pushing
+        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+            headers: { 'Authorization': `Bearer ${ghToken}` }
+        });
+
+        if (!response.ok) {
+            // Network error — silently skip, don't corrupt data
+            console.warn("Auto-sync: cloud check failed", response.status);
+            return;
+        }
+
+        const gistData = await response.json();
+        const file = gistData.files[GIST_FILENAME];
+
+        if (file) {
+            let cloudData;
+            if (file.truncated) {
+                const raw = await fetch(file.raw_url);
+                cloudData = await raw.json();
+            } else {
+                cloudData = JSON.parse(file.content);
+            }
+            const cloudHash = computeTreeHash(cloudData);
+
+            // If cloud also changed → conflict, don't auto-push
+            if (lastSyncHashCache && cloudHash !== lastSyncHashCache && localHash !== lastSyncHashCache) {
+                updateSyncIcon('conflict');
+                console.warn("⚠️ Auto-sync: conflict detected. Manual Push/Fetch required.");
+                return;
+            }
+        }
+
+        // Safe to auto-push (only local changed)
         const body = {
             files: { [GIST_FILENAME]: { content: JSON.stringify(treeData, null, 2) } }
         };
 
-        const finalResponse = await fetch(`https://api.github.com/gists/${gistId}`, {
+        const pushResponse = await fetch(`https://api.github.com/gists/${gistId}`, {
             method: 'PATCH',
             headers: { 'Authorization': `token ${ghToken}` },
             body: JSON.stringify(body)
         });
 
-        if (finalResponse.ok) {
+        if (pushResponse.ok) {
+            saveLastSyncHash(localHash);
             updateSyncIcon('success');
         }
     } catch (e) {

@@ -374,6 +374,63 @@
             </div>
         </div>
     </div>
+
+    <!-- CONFLICT RESOLUTION MODAL -->
+    <div id="conflict-modal-overlay" class="conflict-modal-overlay hidden"
+         role="dialog" aria-modal="true" aria-label="Sync Conflict Resolution">
+        <div class="conflict-modal-box">
+            <div class="conflict-modal-header">
+                <div class="conflict-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </div>
+                <h3 class="conflict-modal-title">Sync Conflict Detected</h3>
+                <p class="conflict-modal-subtitle">Both local and cloud data have changed since last sync.</p>
+            </div>
+            <div class="conflict-modal-stats">
+                <div class="conflict-stat">
+                    <span class="conflict-stat-label">Local</span>
+                    <span class="conflict-stat-value" id="conflict-local-count">--</span>
+                </div>
+                <div class="conflict-stat-divider">vs</div>
+                <div class="conflict-stat">
+                    <span class="conflict-stat-label">Cloud</span>
+                    <span class="conflict-stat-value" id="conflict-cloud-count">--</span>
+                </div>
+            </div>
+            <div class="conflict-modal-options">
+                <button id="conflict-btn-use-cloud" class="conflict-option-btn">
+                    <span class="conflict-option-icon">&#x2601;</span>
+                    <span class="conflict-option-text">
+                        <strong>Use Cloud Data</strong>
+                        <small>Replace local with cloud version</small>
+                    </span>
+                </button>
+                <button id="conflict-btn-use-local" class="conflict-option-btn">
+                    <span class="conflict-option-icon">&#x1F4BB;</span>
+                    <span class="conflict-option-text">
+                        <strong>Use Local Data</strong>
+                        <small>Push local version to cloud</small>
+                    </span>
+                </button>
+                <button id="conflict-btn-smart-merge" class="conflict-option-btn conflict-option-recommended">
+                    <span class="conflict-option-icon">&#x1F500;</span>
+                    <span class="conflict-option-text">
+                        <strong>Smart Merge</strong>
+                        <small>Combine both — local wins on conflicts</small>
+                    </span>
+                    <span class="conflict-recommended-badge">Recommended</span>
+                </button>
+            </div>
+            <div class="conflict-modal-actions">
+                <button id="conflict-btn-cancel" class="btn-secondary-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
