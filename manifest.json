@@ -6,8 +6,9 @@
   "permissions": [
     "sidePanel",
     "storage",
-    "tabs"
-    
+    "tabs",
+    "offscreen",
+    "clipboardWrite"
   ],
   
  "icons": {

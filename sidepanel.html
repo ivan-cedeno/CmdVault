@@ -58,6 +58,13 @@
                             </svg>
                             <span>Settings</span>
                         </div>
+                        <div class="overflow-item" id="overflow-shortcuts" role="menuitem">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"></path>
+                            </svg>
+                            <span>Keyboard Shortcuts</span>
+                        </div>
                         <div class="overflow-item" id="overflow-undock" role="menuitem">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M15 3h6v6"></path><path d="M10 14 21 3"></path>
@@ -76,27 +83,33 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="search-input" placeholder="Search (Ctrl+Space)  #tag  d:  f:  c:" autocomplete="off" aria-label="Search commands" role="searchbox">
+            <input type="text" id="search-input" placeholder="Search (Ctrl+Space)" autocomplete="off" aria-label="Search commands" role="searchbox">
             <span id="search-result-count" class="search-result-count hidden" aria-live="polite"></span>
             <button id="btn-search-clear" class="btn-search-clear hidden" aria-label="Clear search" title="Clear search">✕</button>
+            <div id="search-hints" class="search-hints hidden">
+                <span class="search-hint" data-prefix="#" title="Filter by tag">#tag</span>
+                <span class="search-hint" data-prefix="c:" title="Search command text">c:command</span>
+                <span class="search-hint" data-prefix="d:" title="Search description">d:description</span>
+                <span class="search-hint" data-prefix="f:" title="Search folder name">f:folder</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clipboard Warning Banner (outside main-content for sticky positioning) -->
+    <div id="clipboard-banner" class="clipboard-banner hidden" role="alert" aria-live="polite">
+        <div class="clipboard-banner-content">
+            <span class="clipboard-banner-text">📋 <strong>CmdVault</strong> — <span id="clipboard-banner-cmd"></span> (<span id="clipboard-banner-time">0s</span> ago)</span>
+            <div class="clipboard-banner-actions">
+                <button id="btn-clipboard-clear" class="clipboard-banner-btn" title="Clear clipboard now">Clear</button>
+                <button id="btn-clipboard-dismiss" class="clipboard-banner-btn" title="Dismiss banner">✕</button>
+            </div>
+        </div>
+        <div class="clipboard-banner-countdown">
+            <div id="clipboard-countdown-bar" class="clipboard-countdown-bar"></div>
         </div>
     </div>
 
     <div class="main-content" role="main">
-        <!-- Clipboard Warning Banner -->
-        <div id="clipboard-banner" class="clipboard-banner hidden" role="alert" aria-live="polite">
-            <div class="clipboard-banner-content">
-                <span class="clipboard-banner-text">📋 <strong>CmdVault</strong> — command copied (<span id="clipboard-banner-time">0s</span> ago)</span>
-                <div class="clipboard-banner-actions">
-                    <button id="btn-clipboard-clear" class="clipboard-banner-btn" title="Clear clipboard now">Clear</button>
-                    <button id="btn-clipboard-dismiss" class="clipboard-banner-btn" title="Dismiss banner">✕</button>
-                </div>
-            </div>
-            <div class="clipboard-banner-countdown">
-                <div id="clipboard-countdown-bar" class="clipboard-countdown-bar"></div>
-            </div>
-        </div>
-
         <div id="quick-access-container" class="section-container hidden">
             <div id="qa-header" class="section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="qa-list">
                 <span class="section-label">⭐ Favorites</span>
@@ -308,6 +321,48 @@
             </div>
 
 
+        </div>
+    </div>
+
+    <!-- KEYBOARD SHORTCUTS REFERENCE -->
+    <div id="shortcuts-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Keyboard Shortcuts">
+        <div class="shortcuts-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="margin:0; color:var(--md-sys-color-primary); font-size:15px; display:flex; align-items:center; gap:8px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                        <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"></path>
+                    </svg>
+                    Keyboard Shortcuts
+                </h3>
+                <button id="btn-close-shortcuts" class="btn-icon" aria-label="Close" style="background:none; border:none; cursor:pointer; color:var(--md-sys-color-on-surface); padding:4px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="shortcuts-section">
+                <div class="shortcuts-category">Navigation</div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd></span><span class="shortcut-desc">Navigate items</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>→</kbd></span><span class="shortcut-desc">Expand folder / Enter children</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>←</kbd></span><span class="shortcut-desc">Collapse folder / Go to parent</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd> + <kbd>↑</kbd><kbd>↓</kbd></span><span class="shortcut-desc">Range select</span></div>
+            </div>
+
+            <div class="shortcuts-section">
+                <div class="shortcuts-category">Actions</div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd></span><span class="shortcut-desc">Copy command / Toggle folder</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>F2</kbd></span><span class="shortcut-desc">Edit / Rename</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Delete</kbd></span><span class="shortcut-desc">Delete selected item(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Esc</kbd></span><span class="shortcut-desc">Clear selection</span></div>
+            </div>
+
+            <div class="shortcuts-section">
+                <div class="shortcuts-category">General</div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Space</kbd></span><span class="shortcut-desc">Focus search box</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>A</kbd></span><span class="shortcut-desc">Select all</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Z</kbd></span><span class="shortcut-desc">Undo</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Y</kbd></span><span class="shortcut-desc">Redo</span></div>
+            </div>
         </div>
     </div>
 

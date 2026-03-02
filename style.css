@@ -655,15 +655,21 @@ input[type="text"]#search-input:focus {
     height: 16px;
     flex-shrink: 0;
     margin-right: 2px;
-    opacity: 0;
+    opacity: 0.4;
     cursor: grab;
     color: var(--md-sys-color-outline);
     transition: opacity 0.15s ease, color 0.15s ease;
 }
 .drag-handle:active { cursor: grabbing; }
-.tree-item:hover .drag-handle { opacity: 0.5; }
+.tree-item:hover .drag-handle { opacity: 0.6; }
 .tree-item:hover .drag-handle:hover { opacity: 1; color: var(--md-sys-color-primary); }
 .tree-item.dragging .drag-handle { opacity: 0.3; }
+
+/* Theme-specific drag handle brightness boost */
+body.theme-github-dark .drag-handle,
+body.theme-nord .drag-handle { opacity: 0.55; }
+body.theme-github-dark .tree-item:hover .drag-handle,
+body.theme-nord .tree-item:hover .drag-handle { opacity: 0.75; }
 
 /* Folder command count — minimal inline number */
 .folder-count-badge {
@@ -956,6 +962,72 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     background: var(--md-sys-color-surface); width: 90%; max-width: 340px;
     border-radius: var(--radius-lg); border: 1px solid var(--md-sys-color-surface-container-high);
     padding: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+.settings-box {
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+/* --- KEYBOARD SHORTCUTS MODAL --- */
+.shortcuts-box {
+    background: var(--md-sys-color-surface);
+    width: 90%; max-width: 340px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--md-sys-color-surface-container-high);
+    padding: 20px 24px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+.shortcuts-section {
+    margin-bottom: 14px;
+}
+.shortcuts-section:last-child {
+    margin-bottom: 0;
+}
+.shortcuts-category {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--md-sys-color-primary);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--md-sys-color-surface-container-high);
+}
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 13px;
+}
+.shortcut-keys {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.shortcut-keys kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 6px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 var(--md-sys-color-outline);
+}
+.shortcut-desc {
+    color: var(--md-sys-color-on-surface-variant);
+    text-align: right;
+    font-size: 12px;
 }
 #username-input, #gh-token-input, #theme-selector {
     height: 42px !important; width: 100% !important; padding: 0 12px !important;
@@ -1810,23 +1882,8 @@ body.theme-nord .sh-number   { color: #B48EAD; }
 }
 
 
-/* BADGE ESPECIAL: PRECAUTION */
-.tag-badge.precaution {
-    /* Fondo ámbar translúcido y texto dorado */
-    background-color: rgba(251, 191, 36, 0.1) !important; 
-    color: #fbbf24 !important; 
-    border-color: rgba(251, 191, 36, 0.3) !important;
-}
-
-/* Efecto Hover para Precaution */
-.tree-item:hover .tag-badge.precaution {
-    background-color: #fbbf24 !important;
-    color: #1e293b !important; /* Texto oscuro para contraste */
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
-}
-
 /* ==========================================================================
-   SMART CLOUD TAGS (AWS, Azure, GCP, All Clouds)
+   PREDEFINED TAGS — Cloud + Operations + Categories
    ========================================================================== */
 
 /* Tag Icon (SVG inside badge) */
@@ -1888,6 +1945,146 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     color: #ffffff !important;
     border-color: transparent !important;
     box-shadow: 0 0 10px rgba(156, 39, 176, 0.4);
+}
+
+/* --- TAG: PRECAUTION (Amber) --- */
+.tag-badge.tag-precaution {
+    background-color: rgba(251, 191, 36, 0.1) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(251, 191, 36, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-precaution {
+    background-color: #fbbf24 !important;
+    color: #1e293b !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+}
+
+/* --- TAG: START SERVICE (Emerald Green) --- */
+.tag-badge.tag-start {
+    background-color: rgba(34, 197, 94, 0.1) !important;
+    color: #22c55e !important;
+    border-color: rgba(34, 197, 94, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-start {
+    background-color: #22c55e !important;
+    color: #052e16 !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+/* --- TAG: RESTART (Yellow) --- */
+.tag-badge.tag-restart {
+    background-color: rgba(234, 179, 8, 0.1) !important;
+    color: #eab308 !important;
+    border-color: rgba(234, 179, 8, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-restart {
+    background-color: #eab308 !important;
+    color: #1e293b !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+}
+
+/* --- TAG: WARNING (Orange) --- */
+.tag-badge.tag-warning {
+    background-color: rgba(249, 115, 22, 0.1) !important;
+    color: #f97316 !important;
+    border-color: rgba(249, 115, 22, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-warning {
+    background-color: #f97316 !important;
+    color: #1e293b !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+}
+
+/* --- TAG: STOP SERVICE (Red) --- */
+.tag-badge.tag-stop {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-stop {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+/* --- TAG: PROCEDURE (Adaptive White/Black) --- */
+.tag-badge.tag-procedure {
+    background-color: rgba(226, 232, 240, 0.1) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(226, 232, 240, 0.25) !important;
+}
+.tree-item:hover .tag-badge.tag-procedure {
+    background-color: #e2e8f0 !important;
+    color: #1e293b !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(226, 232, 240, 0.3);
+}
+/* Light theme: dark text */
+body.theme-light .tag-badge.tag-procedure {
+    background-color: rgba(51, 65, 85, 0.08) !important;
+    color: #334155 !important;
+    border-color: rgba(51, 65, 85, 0.25) !important;
+}
+body.theme-light .tree-item:hover .tag-badge.tag-procedure {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+}
+
+/* --- TAG: URL (Gray) --- */
+.tag-badge.tag-url {
+    background-color: rgba(148, 163, 184, 0.1) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
+}
+.tree-item:hover .tag-badge.tag-url {
+    background-color: #94a3b8 !important;
+    color: #0f172a !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
+}
+
+/* --- TAG: INFO (Sky Blue) --- */
+.tag-badge.tag-info {
+    background-color: rgba(56, 189, 248, 0.1) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-info {
+    background-color: #38bdf8 !important;
+    color: #0c4a6e !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+/* --- TAG: BACKUP (Violet) --- */
+.tag-badge.tag-backup {
+    background-color: rgba(167, 139, 250, 0.1) !important;
+    color: #a78bfa !important;
+    border-color: rgba(167, 139, 250, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-backup {
+    background-color: #a78bfa !important;
+    color: #1e1b4b !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+}
+
+/* --- TAG: SCRIPT (Teal/Cyan) --- */
+.tag-badge.tag-script {
+    background-color: rgba(45, 212, 191, 0.1) !important;
+    color: #2dd4bf !important;
+    border-color: rgba(45, 212, 191, 0.3) !important;
+}
+.tree-item:hover .tag-badge.tag-script {
+    background-color: #2dd4bf !important;
+    color: #134e4a !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.4);
 }
 
 /* ==========================================================================
@@ -2644,13 +2841,102 @@ body.theme-nord .sh-number   { color: #B48EAD; }
     color: #fff;
 }
 
-.tag-chip.precaution {
+.tag-chip.tag-precaution {
     color: #fbbf24;
     border-color: rgba(251, 191, 36, 0.3);
 }
-.tag-chip.precaution:hover {
+.tag-chip.tag-precaution:hover {
     background-color: #fbbf24;
     color: #1e293b;
+}
+
+.tag-chip.tag-start {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+.tag-chip.tag-start:hover {
+    background-color: #22c55e;
+    color: #052e16;
+}
+
+.tag-chip.tag-restart {
+    color: #eab308;
+    border-color: rgba(234, 179, 8, 0.3);
+}
+.tag-chip.tag-restart:hover {
+    background-color: #eab308;
+    color: #1e293b;
+}
+
+.tag-chip.tag-warning {
+    color: #f97316;
+    border-color: rgba(249, 115, 22, 0.3);
+}
+.tag-chip.tag-warning:hover {
+    background-color: #f97316;
+    color: #1e293b;
+}
+
+.tag-chip.tag-stop {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.tag-chip.tag-stop:hover {
+    background-color: #ef4444;
+    color: #fff;
+}
+
+.tag-chip.tag-procedure {
+    color: #e2e8f0;
+    border-color: rgba(226, 232, 240, 0.25);
+}
+.tag-chip.tag-procedure:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+body.theme-light .tag-chip.tag-procedure {
+    color: #334155;
+    border-color: rgba(51, 65, 85, 0.25);
+}
+body.theme-light .tag-chip.tag-procedure:hover {
+    background-color: #334155;
+    color: #fff;
+}
+
+.tag-chip.tag-url {
+    color: #94a3b8;
+    border-color: rgba(148, 163, 184, 0.25);
+}
+.tag-chip.tag-url:hover {
+    background-color: #94a3b8;
+    color: #0f172a;
+}
+
+.tag-chip.tag-info {
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.3);
+}
+.tag-chip.tag-info:hover {
+    background-color: #38bdf8;
+    color: #0c4a6e;
+}
+
+.tag-chip.tag-backup {
+    color: #a78bfa;
+    border-color: rgba(167, 139, 250, 0.3);
+}
+.tag-chip.tag-backup:hover {
+    background-color: #a78bfa;
+    color: #1e1b4b;
+}
+
+.tag-chip.tag-script {
+    color: #2dd4bf;
+    border-color: rgba(45, 212, 191, 0.3);
+}
+.tag-chip.tag-script:hover {
+    background-color: #2dd4bf;
+    color: #134e4a;
 }
 
 /* ===== VERSION PICKER MODAL ===== */
@@ -3052,17 +3338,53 @@ body.theme-light .chain-step-delete:hover:not(:disabled) {
 }
 
 /* ==========================================================================
+   SEARCH HINTS — Advanced filter labels
+   ========================================================================== */
+
+.search-hints {
+    display: flex;
+    gap: 6px;
+    padding: 5px 8px;
+    flex-wrap: wrap;
+}
+
+.search-hints.hidden {
+    display: none;
+}
+
+.search-hint {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.08));
+    color: var(--md-sys-color-primary, #ffa500);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    border: 1px solid transparent;
+}
+
+.search-hint:hover {
+    background: var(--md-sys-color-primary, #ffa500);
+    color: var(--md-sys-color-on-primary, #000);
+    border-color: var(--md-sys-color-primary, #ffa500);
+}
+
+/* ==========================================================================
    CLIPBOARD AUTO-CLEAR — Warning banner + countdown
    ========================================================================== */
 
 .clipboard-banner {
-    margin-bottom: 8px;
+    margin: 0 10px 0 10px;
     background: var(--md-sys-color-surface-container, rgba(255, 165, 0, 0.1));
     border: 1px solid var(--md-sys-color-primary, #ffa500);
     border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(255, 165, 0, 0.15);
     animation: clipboardBannerSlideIn 0.3s ease-out;
+    flex-shrink: 0;
+    z-index: 100;
 }
 
 .clipboard-banner.hidden {

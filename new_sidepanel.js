@@ -3,25 +3,28 @@ const FOLDER_COLORS = ['#F37423', '#7DCFFF', '#8CD493', '#E4A8F2', '#FF5252', '#
 const GIST_FILENAME = 'ivan_helper_backup.json';
 const BACKUP_MAX_VERSIONS = 3; // Keep last N versioned backups in Gist
 
-// --- SMART CLOUD TAGS ---
-const CLOUD_TAG_CONFIG = {
-    'aws': {
-        cssClass: 'cloud-aws',
-        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><path d="M8 16c1.5 1 3.5 1 5 0" stroke-width="1.5"></path></svg>`
-    },
-    'azure': {
-        cssClass: 'cloud-azure',
-        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><line x1="13" y1="11" x2="11" y2="17"></line><polyline points="9 14 11 17 13 14" stroke-width="1.5"></polyline></svg>`
-    },
-    'gcp': {
-        cssClass: 'cloud-gcp',
-        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="10 16 12 13 14 16" stroke-width="1.5"></polyline><line x1="12" y1="13" x2="12" y2="17" stroke-width="1.5"></line></svg>`
-    },
-    'all clouds': {
-        cssClass: 'cloud-all',
-        icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>`
-    }
+// --- PREDEFINED TAG CONFIG (Cloud + Operations + Categories) ---
+const TAG_CONFIG = {
+    // Cloud providers
+    'aws':            { cssClass: 'cloud-aws',     icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><path d="M8 16c1.5 1 3.5 1 5 0" stroke-width="1.5"></path></svg>` },
+    'azure':          { cssClass: 'cloud-azure',   icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><line x1="13" y1="11" x2="11" y2="17"></line><polyline points="9 14 11 17 13 14" stroke-width="1.5"></polyline></svg>` },
+    'gcp':            { cssClass: 'cloud-gcp',     icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="10 16 12 13 14 16" stroke-width="1.5"></polyline><line x1="12" y1="13" x2="12" y2="17" stroke-width="1.5"></line></svg>` },
+    'all clouds':     { cssClass: 'cloud-all',     icon: `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>` },
+    // Operations
+    'precaution':     { cssClass: 'tag-precaution'  },
+    'start service':  { cssClass: 'tag-start'       },
+    'restart':        { cssClass: 'tag-restart'      },
+    'warning':        { cssClass: 'tag-warning'      },
+    'stop service':   { cssClass: 'tag-stop'         },
+    'procedure':      { cssClass: 'tag-procedure'    },
+    'url':            { cssClass: 'tag-url'          },
+    'info':           { cssClass: 'tag-info'         },
+    'backup':         { cssClass: 'tag-backup'       },
+    'script':         { cssClass: 'tag-script'       }
 };
+
+// Backward compatibility alias
+const CLOUD_TAG_CONFIG = TAG_CONFIG;
 
 // --- ICON SVG MAP (Resolves short icon IDs to SVG strings at render time) ---
 const ICON_SVG_MAP = {
@@ -562,6 +565,12 @@ function loadDataFromStorage() {
         clipboardAutoClearEnabled = items.clipboardAutoClearEnabled || false;
         clipboardAutoClearTimeout = items.clipboardAutoClearTimeout || 60;
 
+        // Update clipboard settings UI with persisted values
+        const clipboardToggle = document.getElementById('clipboard-autoclear-toggle');
+        const clipboardTimeoutInput = document.getElementById('clipboard-autoclear-timeout');
+        if (clipboardToggle) clipboardToggle.checked = clipboardAutoClearEnabled;
+        if (clipboardTimeoutInput) clipboardTimeoutInput.value = clipboardAutoClearTimeout;
+
         // Load sync conflict hash
         lastSyncHashCache = items.lastSyncHash || null;
 
@@ -1040,9 +1049,10 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     nameSpan.className = 'node-name';
     const nameText = node.name || "Untitled";
 
-    if (filter && filter.trim() !== "") {
+    const highlightKeyword = getSearchKeyword(filter);
+    if (highlightKeyword && highlightKeyword.trim() !== "") {
         try {
-            const escapedFilter = filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedFilter = highlightKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(`(${escapedFilter})`, 'gi');
             nameSpan.innerHTML = nameText.replace(regex, '<span class="search-highlight">$1</span>');
         } catch (e) {
@@ -1075,15 +1085,15 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
             badge.className = 'tag-badge';
 
             const normalizedTag = t.toLowerCase().trim();
-            const cloudConfig = CLOUD_TAG_CONFIG[normalizedTag];
+            const tagConfig = TAG_CONFIG[normalizedTag];
 
-            if (cloudConfig) {
-                // Smart Cloud Tag: colored badge with SVG icon
-                badge.classList.add(cloudConfig.cssClass);
-                badge.innerHTML = `<span class="tag-icon">${cloudConfig.icon}</span>${t}`;
-            } else if (normalizedTag === 'precaution') {
-                badge.classList.add('precaution');
-                badge.textContent = t;
+            if (tagConfig) {
+                badge.classList.add(tagConfig.cssClass);
+                if (tagConfig.icon) {
+                    badge.innerHTML = `<span class="tag-icon">${tagConfig.icon}</span>${t}`;
+                } else {
+                    badge.textContent = t;
+                }
             } else {
                 badge.textContent = t;
             }
@@ -1652,6 +1662,15 @@ function setupAppEvents() {
     bindClick('btn-close-settings', () => { if (sOverlay) sOverlay.classList.add('hidden'); });
     if (sOverlay) sOverlay.onclick = (e) => { if (e.target === sOverlay) sOverlay.classList.add('hidden'); };
 
+    // --- Keyboard Shortcuts Reference ---
+    const scOverlay = document.getElementById('shortcuts-overlay');
+    bindClick('overflow-shortcuts', () => {
+        if (scOverlay) scOverlay.classList.remove('hidden');
+        if (overflowMenu) overflowMenu.classList.add('hidden');
+    });
+    bindClick('btn-close-shortcuts', () => { if (scOverlay) scOverlay.classList.add('hidden'); });
+    if (scOverlay) scOverlay.onclick = (e) => { if (e.target === scOverlay) scOverlay.classList.add('hidden'); };
+
     bindClick('btn-save-username', () => {
         const val = document.getElementById('username-input').value.trim();
         chrome.storage.local.set({ username: val }, () => {
@@ -1702,7 +1721,45 @@ function setupAppEvents() {
     });
 
     const search = document.getElementById('search-input');
-    if (search) search.oninput = (e) => refreshAll();
+    const searchHints = document.getElementById('search-hints');
+
+    if (search) {
+        search.oninput = (e) => {
+            refreshAll();
+            // Hide hints when user starts typing
+            if (searchHints && search.value.length > 0) {
+                searchHints.classList.add('hidden');
+            }
+        };
+
+        // Show hints on focus (only when search is empty)
+        search.addEventListener('focus', () => {
+            if (searchHints && search.value.length === 0) {
+                searchHints.classList.remove('hidden');
+            }
+        });
+
+        // Hide hints on blur (with slight delay so click on hint registers)
+        search.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (searchHints) searchHints.classList.add('hidden');
+            }, 200);
+        });
+    }
+
+    // Search hint click → populate prefix in search box
+    if (searchHints) {
+        searchHints.addEventListener('click', (e) => {
+            const hint = e.target.closest('.search-hint');
+            if (!hint || !search) return;
+            const prefix = hint.dataset.prefix;
+            search.value = prefix;
+            search.focus();
+            // Place cursor at end of prefix
+            search.setSelectionRange(prefix.length, prefix.length);
+            searchHints.classList.add('hidden');
+        });
+    }
 
     // Clear search button
     const clearBtn = document.getElementById('btn-search-clear');
@@ -1945,11 +2002,7 @@ function setupAppEvents() {
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.context-menu')) {
-            const cm = document.getElementById('context-menu');
-            if (cm) {
-                cm.classList.add('hidden');
-                cm.setAttribute('aria-hidden', 'true');
-            }
+            hideContextMenu();
         }
 
         // Deselect all when clicking on empty area (not on a tree item, context menu, modal, or dynamic-modal)
@@ -2077,21 +2130,39 @@ function setupAppEvents() {
     bindClick('btn-export', () => {
         if (!treeData || treeData.length === 0) return showToast("⚠️ Nothing to backup");
 
-        const dataStr = JSON.stringify(treeData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+        // Secret detection before export
+        const secrets = detectSecrets(treeData);
+        if (secrets.length > 0) {
+            const listing = secrets.map(s => `• "${s.nodeName}" → ${s.field}: ${s.preview}`).join('\n');
+            showConfirmModal({
+                title: '⚠️ Secrets Detected',
+                message: `Potential tokens/keys found in your data:\n\n${listing}\n\nExporting may expose sensitive credentials. Continue anyway?`,
+                confirmText: 'Export Anyway',
+                cancelText: 'Cancel',
+                icon: 'danger'
+            }).then(confirmed => {
+                if (confirmed) performExport();
+            });
+        } else {
+            performExport();
+        }
 
-        const a = document.createElement('a');
-        a.href = url;
-        // Agregamos fecha al nombre para mejor organización
-        const date = new Date().toISOString().slice(0, 10);
-        a.download = `cmdvault_backup_${date}.json`;
-        document.body.appendChild(a); // Requerido en algunos contextos de navegador
-        a.click();
+        function performExport() {
+            const dataStr = JSON.stringify(treeData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
 
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast("💾 Backup Downloaded");
+            const a = document.createElement('a');
+            a.href = url;
+            const date = new Date().toISOString().slice(0, 10);
+            a.download = `cmdvault_backup_${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("💾 Backup Downloaded");
+        }
     });
 
     // 2. Importar (Restaurar Local)
@@ -2226,10 +2297,18 @@ function setupAppEvents() {
 
 }
 
+function hideContextMenu() {
+    const cm = document.getElementById('context-menu');
+    if (cm && !cm.classList.contains('hidden')) {
+        cm.classList.add('hidden');
+        cm.setAttribute('aria-hidden', 'true');
+    }
+}
+
 function bindClick(id, fn) {
     const el = document.getElementById(id);
     if (el) {
-        el.onclick = (e) => { e.stopPropagation(); fn(); };
+        el.onclick = (e) => { e.stopPropagation(); hideContextMenu(); fn(); };
     }
 }
 
@@ -2364,10 +2443,14 @@ function clearDragStyles() {
 // --- ACTIONS ---
 function execCopy() {
     const node = findNode(treeData, contextTargetId);
-    if (node) {
+    if (!node) return;
+    try {
         appClipboard = { action: 'copy', data: JSON.parse(JSON.stringify(node)) };
         showToast("📋 Copied");
         refreshAll();
+    } catch (err) {
+        console.error('execCopy failed:', err, 'Node:', node);
+        showToast("❌ Copy failed — see console");
     }
 }
 
@@ -2378,28 +2461,36 @@ function execCut() {
 }
 
 function execPaste() {
-    if (!appClipboard || !contextTargetId) return;
+    if (!appClipboard || !contextTargetId) {
+        showToast("⚠️ Nothing to paste");
+        return;
+    }
     const target = findNode(treeData, contextTargetId);
     if (!target || target.type !== 'folder') return showToast("⚠️ Folders only");
 
-    if (appClipboard.action === 'cut') {
-        const sourceId = appClipboard.id;
-        const targetId = contextTargetId;
-        if (isDescendant(sourceId, targetId)) return showToast("❌ Recursion Error");
+    try {
+        if (appClipboard.action === 'cut') {
+            const sourceId = appClipboard.id;
+            const targetId = contextTargetId;
+            if (isDescendant(sourceId, targetId)) return showToast("❌ Recursion Error");
 
-        appClipboard = null; // Clean before move to clear visuals
-        performMove(sourceId, targetId, 'inside');
-        showToast("✅ Moved");
-    }
-    else {
-        pushUndoState(`Paste: ${appClipboard.data.name || 'Untitled'}`);
-        const copy = cloneNode(appClipboard.data);
-        if (!target.children) target.children = [];
-        target.children.push(copy);
-        target.collapsed = false;
-        saveData();
-        refreshAll();
-        showToast("✅ Pasted");
+            appClipboard = null; // Clean before move to clear visuals
+            performMove(sourceId, targetId, 'inside');
+            showToast("✅ Moved");
+        }
+        else {
+            pushUndoState(`Paste: ${appClipboard.data.name || 'Untitled'}`);
+            const copy = cloneNode(appClipboard.data);
+            if (!target.children) target.children = [];
+            target.children.push(copy);
+            target.collapsed = false;
+            saveData();
+            refreshAll();
+            showToast("✅ Pasted");
+        }
+    } catch (err) {
+        console.error('execPaste failed:', err);
+        showToast("❌ Paste failed — see console");
     }
 }
 
@@ -2927,12 +3018,14 @@ function isDescendant(parentId, childId) {
 }
 
 function cloneNode(node) {
-    const copy = { ...node, id: genId() };
-    if (copy.children) copy.children = copy.children.map(c => cloneNode(c));
-    // Deep-copy chain to avoid shared references
-    if (copy.chain) {
-        copy.chain = { connector: copy.chain.connector, steps: [...copy.chain.steps] };
+    // Full deep clone via JSON to avoid shared references on any property
+    const copy = JSON.parse(JSON.stringify(node));
+    // Assign new unique IDs to all nodes recursively
+    function assignNewIds(n) {
+        n.id = genId();
+        if (n.children) n.children.forEach(c => assignNewIds(c));
     }
+    assignNewIds(copy);
     return copy;
 }
 
@@ -2959,6 +3052,59 @@ function collectAllTags(nodes) {
     }
     walk(nodes);
     return [...tagSet].sort();
+}
+
+// ==========================================================================
+//  SECRET DETECTION — Warns before exporting/syncing sensitive data
+// ==========================================================================
+
+/**
+ * Scans treeData for potential secrets (tokens, API keys, passwords).
+ * Returns array of { nodeName, field, preview } for each detected secret.
+ */
+function detectSecrets(nodes) {
+    const secrets = [];
+    const patterns = [
+        /ghp_[a-zA-Z0-9]{36,}/,                    // GitHub PAT (fine-grained & classic)
+        /github_pat_[a-zA-Z0-9_]{22,}/,             // GitHub PAT (new format)
+        /gho_[a-zA-Z0-9]{36,}/,                     // GitHub OAuth token
+        /ghs_[a-zA-Z0-9]{36,}/,                     // GitHub server token
+        /ghu_[a-zA-Z0-9]{36,}/,                     // GitHub user token
+        /glpat-[a-zA-Z0-9\-_]{20,}/,                // GitLab PAT
+        /sk-[a-zA-Z0-9]{32,}/,                      // OpenAI / Stripe secret key
+        /AKIA[0-9A-Z]{16}/,                         // AWS Access Key ID
+        /AIza[0-9A-Za-z\-_]{35}/,                   // Google API Key
+        /xox[bpsar]-[0-9a-zA-Z\-]{10,}/,            // Slack token
+        /Bearer\s+[a-zA-Z0-9\-_.~+\/]{20,}/,        // Bearer tokens
+        /-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----/,  // Private keys
+    ];
+
+    function walk(list) {
+        for (const n of list) {
+            if (!n) continue;
+            // Check command text and description
+            const fields = [
+                { key: 'cmd', label: 'command' },
+                { key: 'description', label: 'description' },
+                { key: 'name', label: 'name' }
+            ];
+            for (const f of fields) {
+                const val = n[f.key];
+                if (typeof val !== 'string') continue;
+                for (const p of patterns) {
+                    if (p.test(val)) {
+                        const match = val.match(p)[0];
+                        const preview = match.substring(0, 8) + '...' + match.substring(match.length - 4);
+                        secrets.push({ nodeName: n.name || 'Untitled', field: f.label, preview });
+                        break; // One match per field is enough
+                    }
+                }
+            }
+            if (n.children) walk(n.children);
+        }
+    }
+    walk(nodes);
+    return secrets;
 }
 
 //  INLINE EDITING SYSTEM (Modo Edicion Rapida)
@@ -3238,9 +3384,13 @@ function buildInlineForm(node) {
         const tagsGroup = createFieldGroup('Tags', 'input', 'inline-edit-tags', tagsValue, 'tag1, tag2, tag3...');
         form.appendChild(tagsGroup);
 
-        // TAG SUGGESTIONS — clickable chips from existing tags
-        const allTags = collectAllTags(treeData);
-        if (allTags.length > 0) {
+        // TAG SUGGESTIONS — predefined tags + existing tags from tree
+        const predefinedTags = Object.keys(TAG_CONFIG);
+        const userTags = collectAllTags(treeData);
+        // Merge: predefined first, then user-created tags not in predefined
+        const allTags = [...predefinedTags, ...userTags.filter(t => !predefinedTags.includes(t))];
+
+        {
             const suggestionsDiv = document.createElement('div');
             suggestionsDiv.className = 'tag-suggestions';
 
@@ -3266,14 +3416,15 @@ function buildInlineForm(node) {
                     const chip = document.createElement('span');
                     chip.className = 'tag-chip';
 
-                    // Apply cloud/precaution styling
-                    const cloudConfig = CLOUD_TAG_CONFIG[tag];
-                    if (cloudConfig) {
-                        chip.classList.add(cloudConfig.cssClass);
-                        chip.innerHTML = `<span class="tag-icon">${cloudConfig.icon}</span>${tag}`;
-                    } else if (tag === 'precaution') {
-                        chip.classList.add('precaution');
-                        chip.textContent = tag;
+                    // Apply predefined tag styling
+                    const tagConfig = TAG_CONFIG[tag];
+                    if (tagConfig) {
+                        chip.classList.add(tagConfig.cssClass);
+                        if (tagConfig.icon) {
+                            chip.innerHTML = `<span class="tag-icon">${tagConfig.icon}</span>${tag}`;
+                        } else {
+                            chip.textContent = tag;
+                        }
                     } else {
                         chip.textContent = tag;
                     }
@@ -3354,7 +3505,7 @@ function buildInlineForm(node) {
     });
 
     // Prevent event propagation to tree
-    form.addEventListener('click', (e) => e.stopPropagation());
+    form.addEventListener('click', (e) => { e.stopPropagation(); hideContextMenu(); });
     form.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); });
 
     return form;
@@ -3906,6 +4057,20 @@ function setupDocking() {
 }
 
 // Helpers Varios
+/**
+ * Extracts the actual search keyword from advanced filter prefixes.
+ * e.g. "f:cloud" → "cloud", "#linux" → "linux", "hello" → "hello"
+ */
+function getSearchKeyword(filter) {
+    if (!filter) return '';
+    const query = filter.trim().toLowerCase();
+    if (query.startsWith('#')) return query.substring(1);
+    if (query.startsWith('d:')) return query.substring(2).trim();
+    if (query.startsWith('f:')) return query.substring(2).trim();
+    if (query.startsWith('c:')) return query.substring(2).trim();
+    return query;
+}
+
 function isVisible(n, f) {
     if (!f) return true;
     const query = f.trim().toLowerCase();
@@ -4320,8 +4485,23 @@ async function resolveConflict(choice, cloudData) {
 
 /**
  * Internal: pushes current treeData to the existing gist (no conflict check).
+ * Warns if secrets are detected before uploading.
  */
 async function pushToCloud() {
+    // Secret detection before cloud sync
+    const secrets = detectSecrets(treeData);
+    if (secrets.length > 0) {
+        const listing = secrets.map(s => `• "${s.nodeName}" → ${s.field}: ${s.preview}`).join('\n');
+        const confirmed = await showConfirmModal({
+            title: '⚠️ Secrets Detected',
+            message: `Potential tokens/keys found in your data:\n\n${listing}\n\nSyncing will upload them to GitHub Gist. Continue anyway?`,
+            confirmText: 'Sync Anyway',
+            cancelText: 'Cancel',
+            icon: 'danger'
+        });
+        if (!confirmed) throw new Error('Sync cancelled — secrets detected');
+    }
+
     const gistId = localStorage.getItem('gistId');
     const now = new Date();
     const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
@@ -4734,6 +4914,14 @@ function showClipboardBanner(commandName, text) {
     lastClipboardContent = text;
     clipboardCopyTime = Date.now();
 
+    // Update command preview (truncated to 50 chars)
+    const cmdEl = document.getElementById('clipboard-banner-cmd');
+    if (cmdEl) {
+        const preview = text.length > 50 ? text.substring(0, 50) + '...' : text;
+        cmdEl.textContent = preview;
+        cmdEl.title = text; // Full command on hover
+    }
+
     // Update banner time
     const timeEl = document.getElementById('clipboard-banner-time');
     if (timeEl) timeEl.textContent = '0s';
@@ -4754,28 +4942,69 @@ function showClipboardBanner(commandName, text) {
         clearClipboard();
     }, clipboardAutoClearTimeout * 1000);
 
-    // Set animation duration for countdown bar
+    // Reset and restart countdown bar animation
     const countdownBar = document.getElementById('clipboard-countdown-bar');
     if (countdownBar) {
+        // Force animation restart: remove → reflow → re-add
+        countdownBar.style.animation = 'none';
+        countdownBar.offsetHeight; // Force browser reflow
+        countdownBar.style.animation = '';
         countdownBar.style.setProperty('--clipboard-timeout', `${clipboardAutoClearTimeout}s`);
     }
 }
 
 /**
  * Clears the clipboard and hides the banner.
+ * Checks document.hasFocus() to decide the strategy:
+ * - Focused: use navigator.clipboard.writeText('') directly
+ * - Not focused: delegate to offscreen document via background service worker
  */
 function clearClipboard() {
-    navigator.clipboard.writeText('').catch(() => {
-        // Silently fail if permission denied
-    });
+    if (document.hasFocus()) {
+        // Sidepanel has focus — direct clipboard API works
+        navigator.clipboard.writeText('').then(() => {
+            onClipboardCleared();
+        }).catch(() => {
+            // Fallback to offscreen even if focused (permission issue)
+            clearClipboardViaOffscreen();
+        });
+    } else {
+        // Sidepanel lost focus — must use offscreen document
+        clearClipboardViaOffscreen();
+    }
+}
 
+/**
+ * Clears clipboard via background service worker + offscreen document.
+ * Used when the sidepanel does not have focus.
+ */
+function clearClipboardViaOffscreen() {
+    chrome.runtime.sendMessage({ type: 'clear-clipboard' }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('Clipboard clear via offscreen failed:', chrome.runtime.lastError);
+        }
+        // Always clean up UI regardless of success/failure
+        onClipboardCleared();
+    });
+}
+
+/**
+ * UI cleanup after clipboard is cleared (or best-effort cleared).
+ * Hides the banner and cancels all active timers.
+ */
+function onClipboardCleared() {
     const banner = document.getElementById('clipboard-banner');
     if (banner) {
         banner.classList.add('hidden');
     }
 
     clearTimeout(clipboardClearTimer);
-    clearInterval(window.clipboardBannerInterval);
+    clipboardClearTimer = null;
+
+    if (window.clipboardBannerInterval) {
+        clearInterval(window.clipboardBannerInterval);
+        window.clipboardBannerInterval = null;
+    }
 }
 
 /**
