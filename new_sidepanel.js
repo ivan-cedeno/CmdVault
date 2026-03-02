@@ -123,6 +123,15 @@ let clipboardClearTimer = null;           // Timeout ID for auto-clear
 let lastClipboardContent = null;          // Track what's currently in clipboard
 let clipboardCopyTime = null;             // Timestamp when command was copied
 
+// --- DEBOUNCE UTILITY ---
+function debounce(fn, delay) {
+    let timer = null;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
 // --- COMMAND TOOLTIP ---
 let activeTooltip = null;   // Currently visible tooltip DOM element
 let tooltipTimer = null;    // Delay timer before showing tooltip
@@ -257,7 +266,7 @@ function performUndo() {
     treeData = JSON.parse(entry.snapshot);
     saveData();
     setSelectedNode(null);
-    refreshAll();
+    refreshTreeAndFavorites();
     showToast(`\u21a9 Undo: ${entry.description}`);
 }
 
@@ -279,7 +288,7 @@ function performRedo() {
     treeData = JSON.parse(entry.snapshot);
     saveData();
     setSelectedNode(null);
-    refreshAll();
+    refreshTreeAndFavorites();
     showToast(`\u21aa Redo: ${entry.description}`);
 }
 
@@ -634,6 +643,27 @@ function refreshAll() {
     updateSearchUI(filter);
 }
 
+/** Refreshes only the command tree (not history or favorites). */
+function refreshTree() {
+    const search = document.getElementById('search-input');
+    const filter = search ? search.value.toLowerCase() : '';
+    renderTree(filter);
+    updateHeaderIcons();
+    restoreSelection();
+    updateSearchUI(filter);
+}
+
+/** Refreshes tree and favorites (for pin/unpin, delete, move operations). */
+function refreshTreeAndFavorites() {
+    const search = document.getElementById('search-input');
+    const filter = search ? search.value.toLowerCase() : '';
+    renderTree(filter);
+    renderFavorites();
+    updateHeaderIcons();
+    restoreSelection();
+    updateSearchUI(filter);
+}
+
 /**
  * Updates the search UI: result counter badge and clear button visibility.
  * @param {string} filter - The current search filter string.
@@ -711,6 +741,7 @@ function renderTree(filter) {
 
     const shouldAnimate = staggerAnimationEnabled;
     let staggerIndex = 0;
+    const fragment = document.createDocumentFragment();
 
     treeData.forEach(node => {
         if (node && isVisible(node, filter)) {
@@ -719,9 +750,11 @@ function renderTree(filter) {
                 applyStaggerAnimation(el, staggerIndex);
                 staggerIndex++;
             }
-            container.appendChild(el);
+            fragment.appendChild(el);
         }
     });
+
+    container.appendChild(fragment);
 
     // Disable stagger after first render so subsequent refreshes are instant
     if (shouldAnimate) staggerAnimationEnabled = false;
@@ -1105,7 +1138,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
                 if (searchInput) {
                     searchInput.value = '#' + normalizedTag;
                     searchInput.focus();
-                    refreshAll();
+                    refreshTree();
                 }
             };
 
@@ -1163,7 +1196,10 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
                     content.style.pointerEvents = 'none';
                     content.classList.add('collapsed');
                 } else {
-                    // EXPAND: animate from 0 to actual height, then remove max-height
+                    // EXPAND: materialize lazy children if needed, then animate
+                    if (content.dataset.lazy === 'true') {
+                        materializeLazyChildren(content, node);
+                    }
                     content.classList.remove('collapsed');
                     content.style.overflow = 'hidden';
                     content.style.maxHeight = '0';
@@ -1298,7 +1334,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
             e.stopPropagation();
             node.expanded = !node.expanded;
             saveData();
-            refreshAll();
+            refreshTree();
         };
         wrap.appendChild(pre);
         wrap.appendChild(btn);
@@ -1314,24 +1350,50 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
         inner.className = 'folder-content';
         inner.setAttribute('role', 'group');
 
-        if (node.collapsed && !filter) {
-            inner.classList.add('collapsed');
-        }
-
         inner.style.borderLeft = "1px solid var(--md-sys-color-outline-variant, rgba(255,255,255,0.1))";
         inner.style.marginLeft = "10px";
         inner.style.paddingLeft = "6px";
 
-        // PUNTO 3: Propagación del ADN de color hacia los hijos
-        node.children.forEach(child => {
-            if (child && isVisible(child, filter)) {
-                // Pasamos el 'activeColor' de este nodo como el 'inheritedColor' del hijo
-                inner.appendChild(createNodeElement(child, filter, false, activeColor));
-            }
-        });
+        if (node.collapsed && !filter) {
+            // LAZY: Skip child rendering for collapsed folders when not searching
+            inner.classList.add('collapsed');
+            inner.dataset.lazy = 'true';
+            inner.dataset.nodeId = node.id;
+            if (activeColor) inner.dataset.inheritedColor = activeColor;
+        } else {
+            // EAGER: Render children immediately (expanded or search active)
+            node.children.forEach(child => {
+                if (child && isVisible(child, filter)) {
+                    inner.appendChild(createNodeElement(child, filter, false, activeColor));
+                }
+            });
+        }
         wrapper.appendChild(inner);
     }
     return wrapper;
+}
+
+/**
+ * Renders children of a lazy-loaded folder on demand.
+ * Called when a collapsed folder with data-lazy="true" is expanded.
+ */
+function materializeLazyChildren(folderContent, node) {
+    if (!folderContent || folderContent.dataset.lazy !== 'true') return;
+
+    const inheritedColor = folderContent.dataset.inheritedColor || null;
+    const fragment = document.createDocumentFragment();
+
+    (node.children || []).forEach(child => {
+        if (child) {
+            fragment.appendChild(createNodeElement(child, '', false, inheritedColor));
+        }
+    });
+
+    folderContent.appendChild(fragment);
+
+    // Remove lazy markers
+    delete folderContent.dataset.lazy;
+    delete folderContent.dataset.inheritedColor;
 }
 
 // ==========================================================================
@@ -1560,20 +1622,20 @@ function setupAppEvents() {
         qaCollapsed = !qaCollapsed;
         const qaH = document.getElementById('qa-header');
         if (qaH) qaH.setAttribute('aria-expanded', String(!qaCollapsed));
-        saveGlobalState(); refreshAll();
+        saveGlobalState(); refreshTreeAndFavorites();
     });
     bindClick('history-header', () => {
         historyCollapsed = !historyCollapsed;
         const hH = document.getElementById('history-header');
         if (hH) hH.setAttribute('aria-expanded', String(!historyCollapsed));
-        saveGlobalState(); refreshAll();
+        saveGlobalState(); refreshTree();
     });
     bindClick('commands-header', () => {
         commandsCollapsed = !commandsCollapsed;
         const cH = document.getElementById('commands-header');
         if (cH) cH.setAttribute('aria-expanded', String(!commandsCollapsed));
         saveGlobalState();
-        refreshAll();
+        refreshTree();
     });
 
     bindClick('btn-add-root', () => {
@@ -1584,7 +1646,7 @@ function setupAppEvents() {
 
         treeData.push(tempNode);
         inlineEditState = null;
-        refreshAll();
+        refreshTree();
 
         const domElement = findNodeDomElement(newId);
         if (domElement) {
@@ -1724,8 +1786,12 @@ function setupAppEvents() {
     const searchHints = document.getElementById('search-hints');
 
     if (search) {
+        const debouncedSearchRefresh = debounce(() => {
+            refreshTree();
+        }, 200);
+
         search.oninput = (e) => {
-            refreshAll();
+            debouncedSearchRefresh();
             // Hide hints when user starts typing
             if (searchHints && search.value.length > 0) {
                 searchHints.classList.add('hidden');
@@ -1768,7 +1834,7 @@ function setupAppEvents() {
             e.stopPropagation();
             search.value = '';
             search.focus();
-            refreshAll();
+            refreshTree();
         };
     }
 
@@ -1873,7 +1939,7 @@ function setupAppEvents() {
                 // Expand the folder
                 node.collapsed = false;
                 saveData();
-                refreshAll();
+                refreshTree();
             } else if (node.children && node.children.length > 0) {
                 // Already expanded — move selection to first child
                 const items = getVisibleTreeItems();
@@ -1896,7 +1962,7 @@ function setupAppEvents() {
                 // Collapse the folder
                 node.collapsed = true;
                 saveData();
-                refreshAll();
+                refreshTree();
             } else {
                 // Already collapsed or is a command — navigate to parent folder
                 const parentList = findParentList(treeData, selectedNodeId);
@@ -1975,7 +2041,7 @@ function setupAppEvents() {
             if (node.type === 'folder') {
                 node.collapsed = !node.collapsed;
                 saveData();
-                refreshAll();
+                refreshTree();
             } else if (node.type === 'command') {
                 const el = document.querySelector(`.main-content .tree-item[data-node-id="${selectedNodeId}"]`);
                 const wrap = el ? el.querySelector('.cmd-wrapper') : null;
@@ -2431,7 +2497,7 @@ function performMove(sourceId, targetId, action) {
         }
     }
     saveData();
-    refreshAll();
+    refreshTreeAndFavorites();
 }
 
 function clearDragStyles() {
@@ -2447,7 +2513,7 @@ function execCopy() {
     try {
         appClipboard = { action: 'copy', data: JSON.parse(JSON.stringify(node)) };
         showToast("📋 Copied");
-        refreshAll();
+        refreshTree();
     } catch (err) {
         console.error('execCopy failed:', err, 'Node:', node);
         showToast("❌ Copy failed — see console");
@@ -2457,7 +2523,7 @@ function execCopy() {
 function execCut() {
     appClipboard = { action: 'cut', id: contextTargetId };
     showToast("✂️ Cut");
-    refreshAll();
+    refreshTree();
 }
 
 function execPaste() {
@@ -2485,7 +2551,7 @@ function execPaste() {
             target.children.push(copy);
             target.collapsed = false;
             saveData();
-            refreshAll();
+            refreshTreeAndFavorites();
             showToast("✅ Pasted");
         }
     } catch (err) {
@@ -2515,7 +2581,7 @@ function execDuplicate(id) {
     parentList.splice(idx + 1, 0, copy);
 
     saveData();
-    refreshAll();
+    refreshTreeAndFavorites();
     setSelectedNode(copy.id);
     showToast(`📄 Duplicated: ${node.name || 'Untitled'}`);
 }
@@ -2529,7 +2595,7 @@ function execDelete(id) {
             pushUndoState(`Delete: ${node.name || 'Untitled'}`);
             list.splice(idx, 1);
             saveData();
-            refreshAll();
+            refreshTreeAndFavorites();
         }
     }
 }
@@ -2583,7 +2649,7 @@ function execDeleteMultiple() {
             deleteNodesFromTree(treeData, idsToDelete);
             saveData();
             setSelectedNode(null);
-            refreshAll();
+            refreshTreeAndFavorites();
             showToast(`🗑️ Deleted ${count} items`);
         }
     });
@@ -2649,7 +2715,7 @@ function performMoveMultiple(targetId, action) {
 
     saveData();
     setSelectedNode(null);
-    refreshAll();
+    refreshTreeAndFavorites();
     showToast(`📦 Moved ${nodesToMove.length} items`);
 }
 
@@ -2724,9 +2790,9 @@ function execAdd(parentId, type) {
 
     // Insert silently, then render to place it in the DOM
     addItemToTreeSilent(parentId, tempNode);
-    // Temporarily clear state so refreshAll renders the tree
+    // Temporarily clear state so refreshTree renders the tree
     inlineEditState = null;
-    refreshAll();
+    refreshTree();
 
     // Find the newly rendered DOM element and open the editor
     const domElement = findNodeDomElement(newId);
@@ -2751,7 +2817,7 @@ function execAddChain(parentId) {
 
     addItemToTreeSilent(parentId, tempNode);
     inlineEditState = null;
-    refreshAll();
+    refreshTree();
 
     const domElement = findNodeDomElement(newId);
     if (!domElement) return;
@@ -2792,7 +2858,7 @@ function execEditAsChain(id) {
     node.chain = { connector: '&&', steps: existingCmd ? [existingCmd] : [''] };
 
     // Re-render so the DOM reflects the new icon/chain state
-    refreshAll();
+    refreshTree();
 
     const domElement = findNodeDomElement(id);
     if (!domElement) return;
@@ -2840,7 +2906,7 @@ function toggleFolderRecursively(id, shouldCollapse) {
 
     traverse(targetNode);
     saveData();
-    refreshAll();
+    refreshTree();
 }
 
 // Global expand/collapse: traverses entire treeData in one pass
@@ -2855,7 +2921,7 @@ function toggleAllFolders(shouldCollapse) {
     };
     traverse(treeData);
     saveData();
-    refreshAll();
+    refreshTree();
 }
 
 function addItemToTree(parentId, item) {
@@ -2870,7 +2936,7 @@ function addItemToTree(parentId, item) {
         }
     }
     saveData();
-    refreshAll();
+    refreshTree();
 }
 
 function updateItem(id, updates) {
@@ -2879,7 +2945,7 @@ function updateItem(id, updates) {
         pushUndoState(`Update: ${node.name || 'Untitled'}`);
         Object.assign(node, updates);
         saveData();
-        refreshAll();
+        refreshTree();
     }
 }
 
@@ -2900,7 +2966,7 @@ function togglePin(id) {
 
     node.pinned = !node.pinned;
     saveData();
-    refreshAll();
+    refreshTreeAndFavorites();
 }
 
 // --- UTILS ---
@@ -3033,7 +3099,7 @@ function changeTheme(themeName) {
     document.body.className = themeName;
     currentTheme = themeName;
     // Re-render tree so folder colors adapt to the new theme's contrast
-    if (isDataLoaded) refreshAll();
+    if (isDataLoaded) refreshTree();
 }
 
 // ==========================================================================
@@ -3646,7 +3712,7 @@ function saveInlineEdit() {
     inlineEditState = null;
 
     saveData();
-    refreshAll();
+    refreshTreeAndFavorites();
     showToast(wasAdd ? '✅ Created' : '✅ Saved');
 }
 
@@ -3669,7 +3735,7 @@ function cancelInlineEdit() {
     }
 
     inlineEditState = null;
-    refreshAll();
+    refreshTree();
 }
 
 // ENTRADA MAESTRA: Redirige al sistema inteligente
@@ -3992,7 +4058,7 @@ function renderColorPalette() {
         const updated = updateItemProperty(treeData, contextTargetId, { color: null });
         if (updated) {
             saveData();
-            if (typeof refreshAll === 'function') refreshAll();
+            if (typeof refreshTree === 'function') refreshTree();
             const menu = document.getElementById('context-menu');
             if (menu) { menu.classList.add('hidden'); menu.setAttribute('aria-hidden', 'true'); }
         }
@@ -4011,7 +4077,7 @@ function renderColorPalette() {
             if (updated) {
                 // 2. Persistencia y Renderizado
                 saveData();
-                if (typeof refreshAll === 'function') refreshAll();
+                if (typeof refreshTree === 'function') refreshTree();
 
                 // 3. UI: Cerrar menú
                 const menu = document.getElementById('context-menu');
