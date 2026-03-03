@@ -23,6 +23,7 @@ Whether your team manages AWS infrastructure, on-prem Kubernetes clusters, Azure
 - [Favorites (Pinned Commands)](#favorites-pinned-commands)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Themes](#themes)
+- [Multi-Session Sync](#multi-session-sync)
 - [Cloud Sync (GitHub Gist)](#cloud-sync-github-gist)
 - [Import & Export](#import--export)
 - [Clipboard Auto-Clear](#clipboard-auto-clear)
@@ -337,6 +338,13 @@ CmdVault supports full keyboard navigation. Open the reference anytime from the 
 | `Ctrl + Z` | Undo |
 | `Ctrl + Y` | Redo |
 
+### Global (works from any tab)
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Shift + V` | Open CmdVault side panel |
+
+> **Tip:** You can customize the global shortcut at `chrome://extensions/shortcuts`.
+
 Keyboard-driven workflows significantly reduce the time between finding a command and using it.
 
 ---
@@ -358,6 +366,18 @@ CmdVault includes **9 themes** to match your visual preference and reduce eye st
 | ❄️ **Nord** | Arctic Nord palette |
 
 Your selection persists across sessions automatically.
+
+---
+
+## Multi-Session Sync
+
+CmdVault can run simultaneously as a **side panel** and an **undocked window**. All changes are synchronized in real time between open instances:
+
+- Create, edit, or delete a command in one window — it appears instantly in the other
+- Theme changes, clipboard settings, and username updates propagate automatically
+- If you're editing a command when a sync arrives, the refresh is deferred until you finish editing — no data loss
+
+This is powered by Chrome's storage change events and requires no configuration.
 
 ---
 

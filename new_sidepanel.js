@@ -113,6 +113,10 @@ let selectedNodeIds = new Set(); // Multi-select: all currently selected node ID
 let selectionAnchorId = null; // Shift+Click range anchor
 let staggerAnimationEnabled = false; // Controls stagger entry animation (only on initial load)
 
+// --- MULTI-SESSION SYNC ---
+let _selfSaving = false;             // Flag to ignore storage changes triggered by this window
+let _pendingExternalRefresh = false; // Deferred refresh when inline edit is active
+
 // --- SYNC CONFLICT RESOLUTION ---
 let lastSyncHashCache = null;         // Cached hash of treeData at last successful sync
 
@@ -430,7 +434,7 @@ async function checkForUpdates(force = false) {
         const localVersion = chrome.runtime.getManifest().version;
 
         // Save check timestamp and result
-        chrome.storage.local.set({
+        storageSet({
             lastUpdateCheck: Date.now(),
             cachedUpdateResult: remote
         });
@@ -486,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clipboardToggle.checked = clipboardAutoClearEnabled;
         clipboardToggle.addEventListener('change', (e) => {
             clipboardAutoClearEnabled = e.target.checked;
-            chrome.storage.local.set({ clipboardAutoClearEnabled });
+            storageSet({ clipboardAutoClearEnabled });
 
             // If disabling, cancel any running timer and hide banner
             if (!clipboardAutoClearEnabled) {
@@ -527,9 +531,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             clipboardAutoClearTimeout = val;
             clipboardTimeout.value = clipboardAutoClearTimeout;
-            chrome.storage.local.set({ clipboardAutoClearTimeout });
+            storageSet({ clipboardAutoClearTimeout });
         });
     }
+
+    // --- MULTI-SESSION SYNC: Listen for changes from other windows ---
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local') return;
+        handleStorageChanged(changes);
+    });
 });
 
 // --- CARGA DE DATOS ---
@@ -620,16 +630,88 @@ function cleanNodes(nodes) {
     }).filter(n => n !== null);
 }
 
+/** Wrapper for chrome.storage.local.set that suppresses self-triggered onChanged events. */
+function storageSet(data, callback) {
+    _selfSaving = true;
+    chrome.storage.local.set(data, () => {
+        _selfSaving = false;
+        if (callback) callback();
+    });
+}
+
 function saveData() {
     if (!isDataLoaded) return;
-    chrome.storage.local.set({ linuxTree: treeData }, () => {
+    storageSet({ linuxTree: treeData }, () => {
         if (chrome.runtime.lastError) showToast("❌ Save Failed");
         else if (ghToken) autoSyncToCloud();
     });
 }
 
 function saveGlobalState() {
-    chrome.storage.local.set({ qaCollapsed, historyCollapsed, commandsCollapsed });
+    storageSet({ qaCollapsed, historyCollapsed, commandsCollapsed });
+}
+
+// --- MULTI-SESSION SYNC: Handle changes from other windows ---
+const _debouncedExternalRefresh = debounce(() => {
+    if (inlineEditState) {
+        _pendingExternalRefresh = true;
+        return;
+    }
+    refreshAll();
+}, 150);
+
+function handleStorageChanged(changes) {
+    if (_selfSaving) return;
+
+    let needsRefresh = false;
+
+    if (changes.linuxTree && changes.linuxTree.newValue !== undefined) {
+        treeData = cleanNodes(changes.linuxTree.newValue);
+        needsRefresh = true;
+    }
+
+    if (changes.linuxHistory && changes.linuxHistory.newValue !== undefined) {
+        commandHistory = Array.isArray(changes.linuxHistory.newValue) ? changes.linuxHistory.newValue : [];
+        needsRefresh = true;
+    }
+
+    if (changes.qaCollapsed !== undefined) qaCollapsed = changes.qaCollapsed.newValue || false;
+    if (changes.historyCollapsed !== undefined) historyCollapsed = changes.historyCollapsed.newValue || false;
+    if (changes.commandsCollapsed !== undefined) commandsCollapsed = changes.commandsCollapsed.newValue || false;
+
+    if (changes.savedTheme && changes.savedTheme.newValue) {
+        changeTheme(changes.savedTheme.newValue);
+    }
+
+    if (changes.clipboardAutoClearEnabled !== undefined) {
+        clipboardAutoClearEnabled = changes.clipboardAutoClearEnabled.newValue || false;
+        const toggle = document.getElementById('clipboard-autoclear-toggle');
+        if (toggle) toggle.checked = clipboardAutoClearEnabled;
+    }
+    if (changes.clipboardAutoClearTimeout !== undefined) {
+        clipboardAutoClearTimeout = changes.clipboardAutoClearTimeout.newValue || 60;
+        const input = document.getElementById('clipboard-autoclear-timeout');
+        if (input) input.value = clipboardAutoClearTimeout;
+    }
+
+    if (changes.ghToken !== undefined) {
+        ghToken = changes.ghToken.newValue || "";
+        const tokenInput = document.getElementById('gh-token-input');
+        if (tokenInput) tokenInput.value = ghToken;
+    }
+
+    if (changes.username) {
+        const userInput = document.getElementById('username-input');
+        if (userInput) userInput.value = changes.username.newValue || 'user';
+        const title = document.querySelector('.app-title');
+        if (title) title.textContent = `${changes.username.newValue || 'user'}@CmdVault:~$`;
+    }
+
+    if (changes.lastSyncHash !== undefined) {
+        lastSyncHashCache = changes.lastSyncHash.newValue || null;
+    }
+
+    if (needsRefresh) _debouncedExternalRefresh();
 }
 
 function refreshAll() {
@@ -1735,7 +1817,7 @@ function setupAppEvents() {
 
     bindClick('btn-save-username', () => {
         const val = document.getElementById('username-input').value.trim();
-        chrome.storage.local.set({ username: val }, () => {
+        storageSet({ username: val }, () => {
             const t = document.querySelector('.app-title');
             if (t) t.textContent = `${val || 'user'}@CmdVault:~$`;
             showToast("✅ Saved");
@@ -1745,7 +1827,7 @@ function setupAppEvents() {
     bindClick('btn-save-token', () => {
         const t = document.getElementById('gh-token-input').value.trim();
         // Agregamos updateSettingsUI() para habilitar los botones visualmente tras guardar
-        if (t) { ghToken = t; chrome.storage.local.set({ ghToken: t }, () => { showToast("💾 Saved"); updateSettingsUI(); }); }
+        if (t) { ghToken = t; storageSet({ ghToken: t }, () => { showToast("💾 Saved"); updateSettingsUI(); }); }
     });
     bindClick('btn-sync-upload', () => uploadToGist());
     bindClick('btn-sync-download', () => downloadFromGist());
@@ -2063,7 +2145,7 @@ function setupAppEvents() {
     const themeSel = document.getElementById('theme-selector');
     if (themeSel) themeSel.onchange = (e) => {
         changeTheme(e.target.value);
-        chrome.storage.local.set({ savedTheme: e.target.value });
+        storageSet({ savedTheme: e.target.value });
     };
 
     document.addEventListener('click', (e) => {
@@ -2347,7 +2429,7 @@ function setupAppEvents() {
                 selectedNodeIds.clear();
                 selectionAnchorId = null;
                 updateSelectionBadge();
-                chrome.storage.local.set({ linuxTree: treeData, linuxHistory: [] }, () => {
+                storageSet({ linuxTree: treeData, linuxHistory: [] }, () => {
                     refreshAll();
                     showToast("🗑️ Factory Reset Complete");
                     const settingsOverlay = document.getElementById('settings-overlay');
@@ -3714,6 +3796,12 @@ function saveInlineEdit() {
     saveData();
     refreshTreeAndFavorites();
     showToast(wasAdd ? '✅ Created' : '✅ Saved');
+
+    // Flush any deferred external sync refresh
+    if (_pendingExternalRefresh) {
+        _pendingExternalRefresh = false;
+        refreshAll();
+    }
 }
 
 function cancelInlineEdit() {
@@ -3736,6 +3824,12 @@ function cancelInlineEdit() {
 
     inlineEditState = null;
     refreshTree();
+
+    // Flush any deferred external sync refresh
+    if (_pendingExternalRefresh) {
+        _pendingExternalRefresh = false;
+        refreshAll();
+    }
 }
 
 // ENTRADA MAESTRA: Redirige al sistema inteligente
@@ -4367,7 +4461,7 @@ function computeTreeHash(data) {
 
 function saveLastSyncHash(hash) {
     lastSyncHashCache = hash;
-    chrome.storage.local.set({ lastSyncHash: hash });
+    storageSet({ lastSyncHash: hash });
 }
 
 /**
@@ -4530,7 +4624,7 @@ async function resolveConflict(choice, cloudData) {
 
     if (choice === 'use_cloud') {
         treeData = cloudData;
-        chrome.storage.local.set({ linuxTree: treeData });
+        storageSet({ linuxTree: treeData });
         refreshAll();
         showToast("☁️ Local replaced with cloud data");
     } else if (choice === 'use_local') {
@@ -4538,7 +4632,7 @@ async function resolveConflict(choice, cloudData) {
         showToast("💻 Pushing local data to cloud...");
     } else if (choice === 'smart_merge') {
         treeData = smartMergeTree(treeData, cloudData);
-        chrome.storage.local.set({ linuxTree: treeData });
+        storageSet({ linuxTree: treeData });
         refreshAll();
         showToast("🔀 Smart merge complete");
     }
@@ -4731,7 +4825,7 @@ async function downloadFromGist() {
             // Fallback: direct restore from detected cloud data
             pushUndoState('Cloud restore');
             treeData = result.cloudData;
-            chrome.storage.local.set({ linuxTree: treeData }, () => refreshAll());
+            storageSet({ linuxTree: treeData }, () => refreshAll());
             saveLastSyncHash(computeTreeHash(treeData));
             showToast("✅ Restored from cloud");
             updateSyncIcon('success');
@@ -4794,7 +4888,7 @@ async function restoreFromGistFile(rawUrl, label) {
         if (data) {
             pushUndoState(`Restore: ${label}`);
             treeData = data;
-            chrome.storage.local.set({ linuxTree: treeData }, () => {
+            storageSet({ linuxTree: treeData }, () => {
                 refreshAll();
             });
             saveLastSyncHash(computeTreeHash(treeData));
@@ -5118,7 +5212,7 @@ function copyToClipboard(text, name = "Command", element = null) {
             commandHistory.pop();
         }
 
-        chrome.storage.local.set({ linuxHistory: commandHistory }, () => {
+        storageSet({ linuxHistory: commandHistory }, () => {
             if (typeof renderHistory === 'function') {
                 renderHistory();
             }
