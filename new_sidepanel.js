@@ -1066,7 +1066,7 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     row.setAttribute('aria-selected', selectedNodeIds.has(String(node.id)) ? 'true' : 'false');
     row.setAttribute('aria-label', node.name || 'Untitled');
     if (node.type === 'folder') {
-        const isExpanded = !node.collapsed || !!filter;
+        const isExpanded = !node.collapsed;
         row.setAttribute('aria-expanded', String(isExpanded));
     }
     // Make focusable for keyboard navigation (roving tabindex)
@@ -1141,13 +1141,13 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
     if (node.type === 'folder') {
         chevronSpan = document.createElement('span');
         chevronSpan.className = 'tree-chevron';
-        if (!collapsed || filter) chevronSpan.classList.add('expanded');
+        if (!collapsed) chevronSpan.classList.add('expanded');
         chevronSpan.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
         header.appendChild(chevronSpan);
     }
 
     if (node.type === 'folder') {
-        iconSpan.innerHTML = (collapsed && !filter) ? iconClosed : iconOpen;
+        iconSpan.innerHTML = collapsed ? iconClosed : iconOpen;
     } else {
         // Auto-detect pure URLs: show 🔗 icon when cmd is a URL and no custom icon is set
         const isDefaultIcon = !node.icon || node.icon === 'cmd' || node.icon === '⌨️';
@@ -1442,11 +1442,25 @@ function createNodeElement(node, filter, isFav = false, inheritedColor = null) {
             inner.dataset.lazy = 'true';
             inner.dataset.nodeId = node.id;
             if (activeColor) inner.dataset.inheritedColor = activeColor;
-        } else {
-            // EAGER: Render children immediately (expanded or search active)
+        } else if (node.collapsed && filter) {
+            // Collapsed during search: pre-render children (for expand animation) but keep hidden
+            inner.classList.add('collapsed');
+            const folderSelfMatches = nodeSelfMatchesFilter(node, filter);
+            const childFilter = folderSelfMatches ? '' : filter;
             node.children.forEach(child => {
-                if (child && isVisible(child, filter)) {
-                    inner.appendChild(createNodeElement(child, filter, false, activeColor));
+                if (child && (folderSelfMatches || isVisible(child, filter))) {
+                    inner.appendChild(createNodeElement(child, childFilter, false, activeColor));
+                }
+            });
+        } else {
+            // EAGER: Render children immediately (expanded)
+            // If folder itself matches filter, show ALL children (user found this folder,
+            // wants to browse its contents). Otherwise show only filter-matching children.
+            const folderSelfMatches = filter && nodeSelfMatchesFilter(node, filter);
+            const childFilter = folderSelfMatches ? '' : filter;
+            node.children.forEach(child => {
+                if (child && (folderSelfMatches || isVisible(child, filter))) {
+                    inner.appendChild(createNodeElement(child, childFilter, false, activeColor));
                 }
             });
         }
@@ -4280,6 +4294,36 @@ function isVisible(n, f) {
     const selfMatch = nameMatch || cmdMatch || descMatch || tagMatch;
 
     return n.children ? (selfMatch || n.children.some(c => isVisible(c, f))) : selfMatch;
+}
+
+/**
+ * Checks if a node itself matches the filter (without checking children).
+ * Used to determine if a folder was found by its own name/properties vs. its children.
+ */
+function nodeSelfMatchesFilter(node, filter) {
+    if (!filter) return false;
+    const query = filter.trim().toLowerCase();
+    if (query.startsWith('#')) {
+        const tag = query.substring(1);
+        return Array.isArray(node.tags) && node.tags.some(t => t.toLowerCase().includes(tag));
+    }
+    if (query.startsWith('d:')) {
+        const dq = query.substring(2).trim();
+        return dq ? (node.description || '').toLowerCase().includes(dq) : false;
+    }
+    if (query.startsWith('f:')) {
+        const fq = query.substring(2).trim();
+        return fq && node.type === 'folder' ? (node.name || '').toLowerCase().includes(fq) : false;
+    }
+    if (query.startsWith('c:')) {
+        const cq = query.substring(2).trim();
+        return cq ? (node.cmd || '').toLowerCase().includes(cq) : false;
+    }
+    const nameMatch = (node.name || '').toLowerCase().includes(query);
+    const cmdMatch = (node.cmd || '').toLowerCase().includes(query);
+    const descMatch = (node.description || '').toLowerCase().includes(query);
+    const tagMatch = Array.isArray(node.tags) && node.tags.some(t => t.toLowerCase().includes(query));
+    return nameMatch || cmdMatch || descMatch || tagMatch;
 }
 
 function highlightSyntax(c) {
